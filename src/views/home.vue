@@ -2,8 +2,9 @@
 import { onMounted, onUnmounted, ref } from 'vue';
 import { useThreeScene } from '@/composables/useThreeScene';
 import ModelLoader from '@/components/ModelLoader/index.vue';
+import ToolBar from '@/components/ToolBar/index.vue';
 
-const container = ref<HTMLDivElement>();
+const containerRef = ref<HTMLDivElement>();
 const { init, dispose, loading, loadProgress } = useThreeScene();
 
 onMounted(() => {
@@ -21,9 +22,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-	<div class="container">
+	<div class="container" ref="containerRef">
 		<div id="v"></div>
 		<ModelLoader :loading="loading" :loaded="loadProgress.loaded" :total="loadProgress.total" :percent="loadProgress.percent" />
+		<ToolBar />
 	</div>
 </template>
 
