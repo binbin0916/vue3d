@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import SvgIcon from '@/components/SvgIcon/index.vue';
 
 interface ToolItem {
@@ -10,8 +10,27 @@ interface ToolItem {
 	children?: ToolItem[];
 }
 
+interface Props {
+	isMoveMode?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+	isMoveMode: false,
+});
+
+const emit = defineEmits<{
+	'tool-action': [action: string, payload?: any];
+}>();
+
 const activeStack = ref<string[]>([]);
 const activatedItemId = ref<string | null>(null);
+
+watch(
+	() => props.isMoveMode,
+	(val) => {
+		activatedItemId.value = val ? 'move' : null;
+	}
+);
 
 const tools: ToolItem[] = [
 	{
@@ -129,14 +148,11 @@ const handleSelect = (item: ToolItem) => {
 		activeStack.value.push(item.id);
 		currentItems.value = item.children;
 		activatedItemId.value = null;
+	} else if (item.id === 'move') {
+		emit('tool-action', 'move:toggle');
 	} else if (item.activatable) {
-		if (activatedItemId.value === item.id) {
-			activatedItemId.value = null;
-			console.log('Deactivated:', item.id);
-		} else {
-			activatedItemId.value = item.id;
-			console.log('Activated:', item.id);
-		}
+		activatedItemId.value = item.id;
+		console.log('Activated:', item.id);
 	} else {
 		console.log('Selected:', item.id);
 	}

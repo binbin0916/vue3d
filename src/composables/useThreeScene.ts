@@ -17,6 +17,13 @@ export function useThreeScene() {
 	const loadProgress = ref<LoadProgress>({ loaded: 0, total: 0, percent: 0 });
 	const modelSize = ref(0);
 
+	// 移动模式状态
+	const isMoveMode = ref(false);
+	const moveSpeed = ref(1);
+	let isDragging = false;
+	let previousMousePosition = { x: 0, y: 0 };
+	let containerElement: HTMLElement | null = null;
+
 	const render = () => {
 		renderer.value.clear();
 		renderer.value.setViewport(0, 0, window.innerWidth, window.innerHeight);
@@ -26,7 +33,10 @@ export function useThreeScene() {
 	const animate = () => {
 		requestAnimationFrame(animate);
 		render();
-		controls.value.update();
+
+		if (!isMoveMode.value && controls.value.enabled) {
+			controls.value.update();
+		}
 	};
 
 	const onResize = () => {
@@ -36,11 +46,80 @@ export function useThreeScene() {
 		renderer.value.setSize(window.innerWidth, window.innerHeight);
 	};
 
+	const onMouseDown = (e: MouseEvent) => {
+		if (!isMoveMode.value || e.button !== 0) return;
+		isDragging = true;
+		previousMousePosition = { x: e.clientX, y: e.clientY };
+	};
+
+	const onMouseMove = (e: MouseEvent) => {
+		if (!isDragging || !isMoveMode.value || !modelGroup.value) return;
+
+		const deltaX = e.clientX - previousMousePosition.x;
+		const deltaY = e.clientY - previousMousePosition.y;
+
+		const cameraDistance = camera.value.position.length();
+
+		const viewDirection = new THREE.Vector3();
+		camera.value.getWorldDirection(viewDirection);
+
+		const right = new THREE.Vector3();
+		right.crossVectors(viewDirection, camera.value.up).normalize();
+
+		const up = new THREE.Vector3();
+		up.copy(camera.value.up).normalize();
+
+		const panFactor = cameraDistance * moveSpeed.value * 0.0004;
+
+		modelGroup.value.position.add(right.multiplyScalar(-deltaX * panFactor));
+		modelGroup.value.position.add(up.multiplyScalar(deltaY * panFactor));
+
+		previousMousePosition = { x: e.clientX, y: e.clientY };
+	};
+
+	const onMouseUp = () => {
+		isDragging = false;
+	};
+
+	const setMoveMode = (enabled: boolean) => {
+		isMoveMode.value = enabled;
+
+		if (enabled) {
+			// 进入移动模式：禁用控制器
+			if (controls.value) {
+				controls.value.enabled = false;
+			}
+		} else {
+			// 退出移动模式：启用控制器并重置状态
+			if (controls.value) {
+				controls.value.enabled = true;
+				controls.value.reset();
+			}
+		}
+
+		if (containerElement) {
+			containerElement.removeEventListener('mousedown', onMouseDown);
+			window.removeEventListener('mousemove', onMouseMove);
+			window.removeEventListener('mouseup', onMouseUp);
+
+			if (enabled) {
+				containerElement.addEventListener('mousedown', onMouseDown);
+				window.addEventListener('mousemove', onMouseMove);
+				window.addEventListener('mouseup', onMouseUp);
+			}
+		}
+	};
+
+	const setMoveSpeed = (speed: number) => {
+		moveSpeed.value = speed;
+	};
+
 	const init = async (container: HTMLElement, code: string) => {
 		void code;
 		const path = `${MODEL_PATH}export_convert_323248_151.glb`;
-		const MIN_DISPLAY_TIME = 1500; // 进度条最小加载时间
+		const MIN_DISPLAY_TIME = 1500;
 
+		containerElement = container;
 		renderer.value = createRenderer(container);
 		scene.value = createScene();
 
@@ -71,6 +150,9 @@ export function useThreeScene() {
 
 	const dispose = () => {
 		window.removeEventListener('resize', onResize);
+		containerElement?.removeEventListener('mousedown', onMouseDown);
+		window.removeEventListener('mousemove', onMouseMove);
+		window.removeEventListener('mouseup', onMouseUp);
 		renderer.value.dispose();
 	};
 
@@ -80,5 +162,9 @@ export function useThreeScene() {
 		loading,
 		loadProgress,
 		modelSize,
+		isMoveMode,
+		moveSpeed,
+		setMoveMode,
+		setMoveSpeed,
 	};
 }

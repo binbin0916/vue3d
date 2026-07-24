@@ -5,7 +5,26 @@ import ModelLoader from '@/components/ModelLoader/index.vue';
 import ToolBar from '@/components/ToolBar/index.vue';
 
 const containerRef = ref<HTMLDivElement>();
-const { init, dispose, loading, loadProgress } = useThreeScene();
+const {
+	init,
+	dispose,
+	loading,
+	loadProgress,
+	isMoveMode,
+	setMoveMode,
+	setMoveSpeed,
+} = useThreeScene();
+
+const handleToolAction = (action: string, payload?: any) => {
+	switch (action) {
+		case 'move:toggle':
+			setMoveMode(!isMoveMode.value);
+			break;
+		case 'move:setSpeed':
+			setMoveSpeed(payload);
+			break;
+	}
+};
 
 onMounted(() => {
 	const v = document.getElementById('v') as HTMLElement;
@@ -25,7 +44,7 @@ onUnmounted(() => {
 	<div class="container" ref="containerRef">
 		<div id="v"></div>
 		<ModelLoader :loading="loading" :loaded="loadProgress.loaded" :total="loadProgress.total" :percent="loadProgress.percent" />
-		<ToolBar />
+		<ToolBar :is-move-mode="isMoveMode" @tool-action="handleToolAction" />
 	</div>
 </template>
 
