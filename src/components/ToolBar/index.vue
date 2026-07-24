@@ -18,6 +18,7 @@ const tools: ToolItem[] = [
 		id: 'move',
 		icon: 'move',
 		label: '移动',
+		activatable: true,
 	},
 	{
 		id: 'view',
