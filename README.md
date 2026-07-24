@@ -46,3 +46,7 @@ npm run build
 ```sh
 npm run lint
 ```
+
+
+threejs@184中, 对TrackballControls的左键旋转功能进行自定义优化: 
+1. TrackballControls的旋转中心设为物体的中心, 而非世界坐标中心或相机位置
