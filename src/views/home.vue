@@ -3,6 +3,7 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import { useThreeScene } from '@/composables/useThreeScene';
 import ModelLoader from '@/components/ModelLoader/index.vue';
 import ToolBar from '@/components/ToolBar/index.vue';
+import RadialMenu from '@/components/RadialMenu/index.vue';
 
 const containerRef = ref<HTMLDivElement>();
 const {
@@ -44,6 +45,7 @@ onUnmounted(() => {
 	<div class="container" ref="containerRef">
 		<div id="v"></div>
 		<ModelLoader :loading="loading" :loaded="loadProgress.loaded" :total="loadProgress.total" :percent="loadProgress.percent" />
+		<RadialMenu />
 		<ToolBar :is-move-mode="isMoveMode" @tool-action="handleToolAction" />
 	</div>
 </template>
