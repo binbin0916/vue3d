@@ -1,52 +1,185 @@
 # vue-3d
 
-This template should help get you started developing with Vue 3 in Vite.
+基于 Vue 3 + Three.js 的 3D 模型在线查看器，采用策略模式的可扩展工具栏架构。
 
-## Recommended IDE Setup
+## 功能特性
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+- 加载并展示 `.glb` 格式 3D 模型，支持 PBR 材质渲染
+- TrackballControls 轨道控制（旋转、缩放、平移）
+- 材质切换（线框模式、纯色模式）+ 实时颜色选择器
+- 移动模式切换（轨道控制 / 平移拖拽）
+- 策略模式工具栏：创建 handler 文件 + 注册即可扩展新工具
 
-## Recommended Browser Setup
+## 技术栈
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+| 层级 | 技术 |
+|------|------|
+| 前端框架 | Vue 3（Composition API `<script setup>`） |
+| 3D 引擎 | Three.js 0.184 |
+| 构建工具 | Vite 8 + TypeScript 6 |
+| 状态管理 | Pinia 3 |
+| 样式 | SCSS |
+| 代码规范 | Oxlint + ESLint + Prettier |
 
-## Type Support for `.vue` Imports in TS
+## 快速开始
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+```bash
+# 环境要求
+# Node.js ^22.18.0 或 >=24.12.0
+# pnpm
 
-## Customize configuration
+# 安装
+git clone <仓库地址>
+cd vue-3d
+pnpm install
 
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
-npm install
+# 启动开发服务器
+pnpm dev
 ```
 
-### Compile and Hot-Reload for Development
+浏览器访问 `http://localhost:5173`
 
-```sh
-npm run dev
+## 可用命令
+
+| 命令 | 说明 |
+|------|------|
+| `pnpm dev` | 启动开发服务器 |
+| `pnpm build` | 类型检查 + 生产构建 |
+| `pnpm build-only` | 仅构建（跳过类型检查） |
+| `pnpm preview` | 预览生产构建 |
+| `pnpm lint` | 按顺序执行 oxlint → eslint → prettier |
+| `pnpm type-check` | 仅类型检查（`vue-tsc --build`） |
+
+## 项目架构
+
+### 工具调用流程
+
+```
+用户点击菜单项
+    ↓
+ToolBar 触发 'tool-action' 事件
+    ↓
+home.vue 通过 toolRegistry 分发
+    ↓
+handler 函数执行（操作 Three.js 场景）
 ```
 
-### Type-Check, Compile and Minify for Production
+### 目录结构
 
-```sh
-npm run build
+```
+src/
+├── composables/
+│   └── useThreeScene.ts    # 3D 场景状态 + 生命周期管理
+├── components/
+│   ├── ToolBar/            # 底部工具栏（多级菜单 + 面包屑 + 颜色选择器）
+│   ├── RadialMenu/         # 右下角径向设置菜单
+│   └── ModelLoader/        # 模型加载遮罩层（进度条）
+├── tools/                  # 工具处理器（策略模式）
+│   ├── types.ts            # ToolContext 接口 + ToolHandler 类型
+│   ├── index.ts            # action → handler 注册表
+│   ├── material.ts         # 材质工具（线框/纯色）
+│   └── *.ts                # 每个功能一个文件
+├── three/                  # Three.js 模块化封装
+│   ├── renderer.ts         # WebGL 渲染器
+│   ├── scene.ts            # 场景创建
+│   ├── camera.ts           # 透视相机
+│   ├── light.ts            # 多光源照明系统
+│   ├── model.ts            # GLB 模型加载 + 材质替换
+│   └── controls.ts         # TrackballControls 轨道控制器
+└── utils/
+    └── tree.ts             # 通用树形查找工具
 ```
 
-### Lint with [ESLint](https://eslint.org/)
+### 新增工具
 
-```sh
-npm run lint
+**第 1 步：创建 handler 文件**
+
+```ts
+// src/tools/your-tool.ts
+import type { ToolContext, ToolHandler } from './types';
+
+export const yourAction: ToolHandler = (ctx: ToolContext, payload?: string) => {
+  // 操作 ctx.scene、ctx.modelGroup 等
+};
 ```
 
+**第 2 步：注册到 registry**
 
-threejs@184中, 对TrackballControls的左键旋转功能进行自定义优化: 
-1. TrackballControls的旋转中心设为物体的中心, 而非世界坐标中心或相机位置
+```ts
+// src/tools/index.ts
+import { yourAction } from './your-tool';
+
+export const toolRegistry: Record<string, ToolHandler> = {
+  // ... 已有工具
+  'your-tool:action': yourAction,
+  'your-tool:action:restore': restoreHandler,  // 可切换工具必须提供 restore
+};
+```
+
+**第 3 步：添加菜单项**
+
+```ts
+// src/components/ToolBar/index.vue
+const tools: ToolItem[] = [
+  // ... 已有菜单
+  {
+    id: 'your-tool',
+    icon: 'your-icon',          // 对应 src/assets/svgs/ 下的 SVG 文件名
+    label: '你的工具',
+    children: [
+      { id: 'your-tool:action', icon: 'your-icon', label: '操作', activatable: true },
+    ],
+  },
+];
+```
+
+### ToolItem 接口
+
+```ts
+interface ToolItem {
+  id: string;            // 发送给 toolRegistry 的 action 标识
+  icon: string;          // SVG 图标名
+  label: string;         // 显示文本
+  activatable?: boolean; // 点击后是否高亮激活
+  children?: ToolItem[]; // 子菜单
+  color?: boolean;       // 是否显示颜色选择器
+  defaultColor?: string; // 激活时的默认颜色
+  group?: string;        // 同组工具可共存，不同组互斥
+}
+```
+
+> [!NOTE]
+> 同一 `group` 的工具效果可同时生效（如线框 + X光），不同 `group` 的工具互斥（如线框 vs 纯色）。
+
+### ToolContext
+
+所有工具处理器接收统一的上下文对象：
+
+```ts
+interface ToolContext {
+  renderer: THREE.WebGLRenderer;
+  scene: THREE.Scene;
+  camera: THREE.PerspectiveCamera;
+  modelGroup: THREE.Object3D;
+  controls: TrackballControls;
+  modelSize: number;
+  isMoveMode: boolean;
+  moveSpeed: number;
+  setMoveMode: (enabled: boolean) => void;
+  setMoveSpeed: (speed: number) => void;
+}
+```
+
+## 代码规范
+
+- **缩进**：Tab（`.editorconfig` + `.prettierrc.json` 强制）
+- **Prettier**：Tab、单引号、尾逗号、150 字符行宽
+- **Vue**：仅使用 `<script setup lang="ts">`
+- **样式**：SCSS `scoped`，BEM 风格类名
+- **导入**：`@/` 别名映射到 `src/`
+- **Three.js 对象**：使用 `shallowRef`（非 `ref`）避免响应式开销
+- **禁止 console.log**：使用 `console.warn`/`error`/`info`
+
+## 模型文件
+
+将 `.glb` 文件放置在 `public/model/get/` 目录下，默认加载路径为 `/model/get/export_convert_323248_151.glb`。
