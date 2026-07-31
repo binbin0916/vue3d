@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import SvgIcon from '@/components/SvgIcon/index.vue';
+import { findItemById } from '@/utils/tree';
 
 interface MenuItem {
 	id: string;
@@ -10,8 +11,19 @@ interface MenuItem {
 	children?: MenuItem[];
 }
 
+/**
+ * RadialMenu - 径向菜单组件
+ *
+ * @description 右下角浮动的径向菜单，支持多级展开。第一级以扇形径向展开，
+ * 后续级别以列表形式展示。点击外部区域自动关闭
+ *
+ * @fires select - 点击非激活型叶子菜单项时触发
+ * @fires activate - 点击可激活型叶子菜单项时触发，携带 id 和激活状态
+ */
 const emit = defineEmits<{
+	/** 非激活型菜单项被选中时触发 */
 	select: [item: MenuItem];
+	/** 可激活型菜单项状态变化时触发 */
 	activate: [id: string, activated: boolean];
 }>();
 
@@ -64,17 +76,6 @@ const menuItems: MenuItem[] = [
 
 const currentItems = ref<MenuItem[]>(menuItems);
 
-function findItemById(items: MenuItem[], id: string): MenuItem | undefined {
-	for (const item of items) {
-		if (item.id === id) return item;
-		if (item.children) {
-			const found = findItemById(item.children, id);
-			if (found) return found;
-		}
-	}
-	return undefined;
-}
-
 const currentParent = computed(() => {
 	if (activeStack.value.length === 0) return null;
 	const parentId = activeStack.value.at(-1);
@@ -83,6 +84,11 @@ const currentParent = computed(() => {
 
 const menuLevel = computed(() => activeStack.value.length);
 
+/**
+ * handleToggle - 切换菜单开关状态
+ *
+ * @description 打开/关闭径向菜单。关闭时重置菜单状态
+ */
 const handleToggle = () => {
 	isOpen.value = !isOpen.value;
 	if (!isOpen.value) {
@@ -90,6 +96,11 @@ const handleToggle = () => {
 	}
 };
 
+/**
+ * resetMenu - 重置菜单到初始状态
+ *
+ * @description 清空导航栈，重置为根级菜单，取消所有激活和悬停状态
+ */
 const resetMenu = () => {
 	activeStack.value = [];
 	currentItems.value = menuItems;
@@ -97,6 +108,16 @@ const resetMenu = () => {
 	hoveredItem.value = null;
 };
 
+/**
+ * handleSelect - 菜单项点击处理
+ *
+ * @description 根据菜单项类型执行不同操作：
+ * - 有子菜单：进入下一级列表菜单
+ * - 可激活型：切换高亮状态并触发 activate 事件
+ * - 普通型：触发 select 事件
+ *
+ * @param {MenuItem} item - 被点击的菜单项
+ */
 const handleSelect = (item: MenuItem) => {
 	if (item.children && item.children.length > 0) {
 		activeStack.value.push(item.id);
@@ -111,6 +132,11 @@ const handleSelect = (item: MenuItem) => {
 	}
 };
 
+/**
+ * handleBack - 返回上一级菜单
+ *
+ * @description 从导航栈中弹出当前层级，恢复到父级菜单
+ */
 const handleBack = () => {
 	activeStack.value.pop();
 	activatedItemId.value = null;
@@ -125,6 +151,13 @@ const handleBack = () => {
 	}
 };
 
+/**
+ * handleClickOutside - 点击外部关闭菜单
+ *
+ * @description 检测点击事件是否发生在菜单外部，若是则关闭菜单并重置状态
+ *
+ * @param {MouseEvent} e - 原始鼠标事件
+ */
 const handleClickOutside = (e: MouseEvent) => {
 	if (menuRef.value && !menuRef.value.contains(e.target as Node)) {
 		isOpen.value = false;
@@ -140,12 +173,21 @@ onUnmounted(() => {
 	document.removeEventListener('click', handleClickOutside);
 });
 
-// 计算径向菜单项位置（第四象限扇形）
+/**
+ * getItemPosition - 计算径向菜单项的扇形位置
+ *
+ * @description 将菜单项按 15°~75° 的扇形范围均匀分布在半径 75px 的圆弧上
+ *
+ * @param {number} index - 当前菜单项在列表中的索引
+ * @param {number} total - 菜单项总数
+ *
+ * @returns {{ x: number; y: number; angle: number }} 位置坐标（px）和角度（度）
+ */
 const getItemPosition = (index: number, total: number) => {
 	const radius = 75;
 	// 从 15° 到 75° 的扇形范围
-	const startAngle = 15;
-	const endAngle = 75;
+	const startAngle = 0;
+	const endAngle = 90;
 	const angle = total === 1 ? 45 : startAngle + ((endAngle - startAngle) / (total - 1)) * index;
 	const rad = (angle * Math.PI) / 180;
 
@@ -186,12 +228,7 @@ const getItemPosition = (index: number, total: number) => {
 						'--delay': `${index * 50}ms`,
 					}"
 				>
-					<button
-						class="radial-btn"
-						@mouseenter="hoveredItem = item.id"
-						@mouseleave="hoveredItem = null"
-						@click.stop="handleSelect(item)"
-					>
+					<button class="radial-btn" @mouseenter="hoveredItem = item.id" @mouseleave="hoveredItem = null" @click.stop="handleSelect(item)">
 						<SvgIcon :name="item.icon" :size="18" />
 					</button>
 					<Transition name="tooltip">

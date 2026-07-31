@@ -13,12 +13,23 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * SvgIcon - SVG 图标组件
+ *
+ * @description 从 SVG sprite 中按名称加载并显示图标。
+ * 配合 vite-plugin-svg-icons 使用，图标文件位于 src/assets/svgs/ 目录
+ *
+ * @example
+ * ```vue
+ * <SvgIcon name="move" :size="18" color="#333" />
+ * ```
+ */
 interface Props {
-	/** SVG 文件名（不含扩展名） */
+	/** SVG 文件名（不含扩展名），对应 src/assets/svgs/ 下的文件 */
 	name: string;
-	/** 图标大小（px） */
+	/** 图标大小（px），默认 16 */
 	size?: number;
-	/** 图标颜色（CSS 颜色值） */
+	/** 图标颜色（CSS 颜色值），默认 '#303133' */
 	color?: string;
 }
 

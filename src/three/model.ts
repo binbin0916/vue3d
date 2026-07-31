@@ -1,19 +1,49 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
+/**
+ * ModelResult - 模型加载结果
+ *
+ * @description 封装 GLTFLoader 加载完成后的模型数据
+ */
 export interface ModelResult {
+	/** GLTF 场景根节点（已居中、重置缩放） */
 	scene: THREE.Object3D;
+	/** 场景中所有 Mesh 对象的扁平数组 */
 	meshes: THREE.Mesh[];
+	/** 包裹场景的父级 Object3D，已设置旋转角度（PI/4, -PI/4, PI/4） */
 	group: THREE.Object3D;
+	/** 模型包围盒最大边长，用于灯光、相机、控制器的尺寸基准 */
 	modelSize: number;
 }
 
+/**
+ * LoadProgress - 模型加载进度
+ *
+ * @description GLTFLoader 加载过程中的进度回调数据
+ */
 export interface LoadProgress {
+	/** 已加载字节数 */
 	loaded: number;
+	/** 文件总字节数 */
 	total: number;
+	/** 加载百分比 (0-100) */
 	percent: number;
 }
 
+/**
+ * loadModel - 加载 GLB/GLTF 3D 模型
+ *
+ * @description 使用 Three.js GLTFLoader 加载远程 GLB 模型文件。加载完成后会：
+ * 1. 将所有 Mesh 替换为 MeshStandardMaterial（支持双面渲染和阴影）
+ * 2. 计算包围盒并将模型居中
+ * 3. 包裹在旋转 45° 的 Object3D 中以获得默认展示角度
+ *
+ * @param {string} url - 模型文件的 URL 路径（如 '/model/get/xxx.glb'）
+ * @param {(_progress: LoadProgress) => void} [onProgress] - 加载进度回调函数，每帧触发
+ *
+ * @returns {Promise<ModelResult>} 加载完成后返回模型数据（场景、网格、组、尺寸）
+ */
 export function loadModel(url: string, onProgress?: (_progress: LoadProgress) => void): Promise<ModelResult> {
 	return new Promise((resolve, reject) => {
 		const loader = new GLTFLoader();

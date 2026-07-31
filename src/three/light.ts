@@ -1,5 +1,16 @@
 import * as THREE from 'three';
 
+/**
+ * addLights - 向场景中添加多光源照明
+ *
+ * @description 添加 10 盏灯光以实现专业级 3D 渲染效果，包括：环境光、半球光、主光（带阴影）、
+ * 补光、背光、底部光、正面光、左右侧面光和轮廓光。所有灯光位置基于模型尺寸动态计算
+ *
+ * @param {THREE.Scene} scene - 要添加灯光的 Three.js 场景
+ * @param {number} modelSize - 模型最大包围盒边长，用于计算灯光位置和阴影范围
+ *
+ * @returns {void}
+ */
 export function addLights(scene: THREE.Scene, modelSize: number): void {
 	const s = modelSize;
 

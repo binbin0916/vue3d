@@ -1,10 +1,25 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
+/**
+ * ModelLoader - 模型加载遮罩层组件
+ *
+ * @description 全屏居中显示加载动画，包含旋转进度圈、已加载/总大小、百分比进度条。
+ * 通过 v-if 控制显示隐藏，带淡入淡出过渡动画
+ *
+ * @example
+ * ```vue
+ * <ModelLoader :loading="loading" :loaded="1024" :total="5120" :percent="20" />
+ * ```
+ */
 interface Props {
+	/** 是否正在加载，控制遮罩层显示 */
 	loading: boolean;
+	/** 已加载字节数 */
 	loaded: number;
+	/** 文件总字节数 */
 	total: number;
+	/** 加载百分比 (0-100) */
 	percent: number;
 }
 
@@ -13,6 +28,12 @@ const props = defineProps<Props>();
 const loadedSize = computed(() => formatSize(props.loaded));
 const totalSize = computed(() => formatSize(props.total));
 
+/**
+ * formatSize - 将字节数格式化为可读的文件大小字符串
+ *
+ * @param {number} bytes - 字节数
+ * @returns {string} 格式化后的字符串（如 '1.50 MB'）
+ */
 function formatSize(bytes: number): string {
 	if (bytes === 0) return '0 B';
 	const units = ['B', 'KB', 'MB', 'GB'];
