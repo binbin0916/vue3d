@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import { useThreeScene } from '@/composables/useThreeScene';
 import { toolRegistry } from '@/tools';
 import type { ToolContext } from '@/tools';
 import ModelLoader from '@/components/ModelLoader/index.vue';
 import ToolBar from '@/components/ToolBar/index.vue';
 import RadialMenu from '@/components/RadialMenu/index.vue';
+import DraggableDialog from '@/components/DraggableDialog/index.vue';
 
 const {
 	init,
