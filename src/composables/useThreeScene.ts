@@ -206,7 +206,7 @@ export function useThreeScene() {
 	 */
 	const init = async (container: HTMLElement, _code: string) => {
 		const path = `${MODEL_PATH}IPTH8-20.glb`;
-		const MIN_DISPLAY_TIME = 1500;
+		const MIN_DISPLAY_TIME = 1000; // 最小loading时长
 
 		containerElement = container;
 		loading.value = true;
