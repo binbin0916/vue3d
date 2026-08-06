@@ -32,7 +32,7 @@ const activeStack = ref<string[]>([]);
 const activatedItemId = ref<string | null>(null);
 const hoveredItem = ref<string | null>(null);
 const menuRef = ref<HTMLDivElement>();
-
+// 
 const menuItems: MenuItem[] = [
 	{
 		id: 'settings',

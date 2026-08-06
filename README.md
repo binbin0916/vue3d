@@ -12,14 +12,14 @@
 
 ## 技术栈
 
-| 层级 | 技术 |
-|------|------|
+| 层级     | 技术                                      |
+| -------- | ----------------------------------------- |
 | 前端框架 | Vue 3（Composition API `<script setup>`） |
-| 3D 引擎 | Three.js 0.184 |
-| 构建工具 | Vite 8 + TypeScript 6 |
-| 状态管理 | Pinia 3 |
-| 样式 | SCSS |
-| 代码规范 | Oxlint + ESLint + Prettier |
+| 3D 引擎  | Three.js 0.184                            |
+| 构建工具 | Vite 8 + TypeScript 6                     |
+| 状态管理 | Pinia 3                                   |
+| 样式     | SCSS                                      |
+| 代码规范 | Oxlint + ESLint + Prettier                |
 
 ## 快速开始
 
@@ -41,14 +41,14 @@ pnpm dev
 
 ## 可用命令
 
-| 命令 | 说明 |
-|------|------|
-| `pnpm dev` | 启动开发服务器 |
-| `pnpm build` | 类型检查 + 生产构建 |
-| `pnpm build-only` | 仅构建（跳过类型检查） |
-| `pnpm preview` | 预览生产构建 |
-| `pnpm lint` | 按顺序执行 oxlint → eslint → prettier |
-| `pnpm type-check` | 仅类型检查（`vue-tsc --build`） |
+| 命令              | 说明                                  |
+| ----------------- | ------------------------------------- |
+| `pnpm dev`        | 启动开发服务器                        |
+| `pnpm build`      | 类型检查 + 生产构建                   |
+| `pnpm build-only` | 仅构建（跳过类型检查）                |
+| `pnpm preview`    | 预览生产构建                          |
+| `pnpm lint`       | 按顺序执行 oxlint → eslint → prettier |
+| `pnpm type-check` | 仅类型检查（`vue-tsc --build`）       |
 
 ## 项目架构
 
@@ -99,7 +99,7 @@ src/
 import type { ToolContext, ToolHandler } from './types';
 
 export const yourAction: ToolHandler = (ctx: ToolContext, payload?: string) => {
-  // 操作 ctx.scene、ctx.modelGroup 等
+	// 操作 ctx.scene、ctx.modelGroup 等
 };
 ```
 
@@ -110,9 +110,9 @@ export const yourAction: ToolHandler = (ctx: ToolContext, payload?: string) => {
 import { yourAction } from './your-tool';
 
 export const toolRegistry: Record<string, ToolHandler> = {
-  // ... 已有工具
-  'your-tool:action': yourAction,
-  'your-tool:action:restore': restoreHandler,  // 可切换工具必须提供 restore
+	// ... 已有工具
+	'your-tool:action': yourAction,
+	'your-tool:action:restore': restoreHandler, // 可切换工具必须提供 restore
 };
 ```
 
@@ -121,15 +121,13 @@ export const toolRegistry: Record<string, ToolHandler> = {
 ```ts
 // src/components/ToolBar/index.vue
 const tools: ToolItem[] = [
-  // ... 已有菜单
-  {
-    id: 'your-tool',
-    icon: 'your-icon',          // 对应 src/assets/svgs/ 下的 SVG 文件名
-    label: '你的工具',
-    children: [
-      { id: 'your-tool:action', icon: 'your-icon', label: '操作', activatable: true },
-    ],
-  },
+	// ... 已有菜单
+	{
+		id: 'your-tool',
+		icon: 'your-icon', // 对应 src/assets/svgs/ 下的 SVG 文件名
+		label: '你的工具',
+		children: [{ id: 'your-tool:action', icon: 'your-icon', label: '操作', activatable: true }],
+	},
 ];
 ```
 
@@ -137,14 +135,14 @@ const tools: ToolItem[] = [
 
 ```ts
 interface ToolItem {
-  id: string;            // 发送给 toolRegistry 的 action 标识
-  icon: string;          // SVG 图标名
-  label: string;         // 显示文本
-  activatable?: boolean; // 点击后是否高亮激活
-  children?: ToolItem[]; // 子菜单
-  color?: boolean;       // 是否显示颜色选择器
-  defaultColor?: string; // 激活时的默认颜色
-  group?: string;        // 同组工具可共存，不同组互斥
+	id: string; // 发送给 toolRegistry 的 action 标识
+	icon: string; // SVG 图标名
+	label: string; // 显示文本
+	activatable?: boolean; // 点击后是否高亮激活
+	children?: ToolItem[]; // 子菜单
+	color?: boolean; // 是否显示颜色选择器
+	defaultColor?: string; // 激活时的默认颜色
+	group?: string; // 同组工具可共存，不同组互斥
 }
 ```
 
@@ -157,16 +155,16 @@ interface ToolItem {
 
 ```ts
 interface ToolContext {
-  renderer: THREE.WebGLRenderer;
-  scene: THREE.Scene;
-  camera: THREE.PerspectiveCamera;
-  modelGroup: THREE.Object3D;
-  controls: TrackballControls;
-  modelSize: number;
-  isMoveMode: boolean;
-  moveSpeed: number;
-  setMoveMode: (enabled: boolean) => void;
-  setMoveSpeed: (speed: number) => void;
+	renderer: THREE.WebGLRenderer;
+	scene: THREE.Scene;
+	camera: THREE.PerspectiveCamera;
+	modelGroup: THREE.Object3D;
+	controls: TrackballControls;
+	modelSize: number;
+	isMoveMode: boolean;
+	moveSpeed: number;
+	setMoveMode: (enabled: boolean) => void;
+	setMoveSpeed: (speed: number) => void;
 }
 ```
 
