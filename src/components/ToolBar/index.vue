@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue';
 import SvgIcon from '@/components/SvgIcon/index.vue';
 import { findItemById } from '@/utils/tree';
+import { useToolStore } from '@/stores/tool';
 
 /**
  * ToolItem - 工具栏菜单项数据结构
@@ -50,7 +51,7 @@ const emit = defineEmits<{
 }>();
 
 const activeStack = ref<string[]>([]);
-const activeTools = ref<Set<string>>(new Set());
+const toolStore = useToolStore();
 const selectedColor = ref('#ffffff');
 const colorMode = ref<'hex' | 'rgb'>('hex');
 
@@ -60,8 +61,8 @@ const colorMode = ref<'hex' | 'rgb'>('hex');
  * @description 当前激活的菜单项支持 color 属性时显示
  */
 const showColorPicker = computed(() => {
-	if (activeTools.value.size === 0) return false;
-	for (const id of activeTools.value) {
+	if (toolStore.activeTools.size === 0) return false;
+	for (const id of toolStore.activeTools) {
 		const item = findItemById(tools, id);
 		if (item?.color === true) return true;
 	}
@@ -139,7 +140,7 @@ const handleColorInput = (e: Event) => {
 	const hex = colorMode.value === 'hex' ? parseHexColor(raw) : parseRgbColor(raw);
 	if (hex) {
 		selectedColor.value = hex;
-		for (const id of activeTools.value) {
+		for (const id of toolStore.activeTools) {
 			const item = findItemById(tools, id);
 			if (item?.color) {
 				emit('tool-action', id, hex);
@@ -158,7 +159,7 @@ const handleColorInput = (e: Event) => {
 const handleSwatchInput = (e: Event) => {
 	const color = (e.target as HTMLInputElement).value;
 	selectedColor.value = color;
-	for (const id of activeTools.value) {
+	for (const id of toolStore.activeTools) {
 		const item = findItemById(tools, id);
 		if (item?.color) {
 			emit('tool-action', id, color);
@@ -179,11 +180,10 @@ watch(
 	() => props.isMoveMode,
 	(val) => {
 		if (val) {
-			activeTools.value.add('move');
+			toolStore.activate('move');
 		} else {
-			activeTools.value.delete('move');
+			toolStore.deactivate('move');
 		}
-		activeTools.value = new Set(activeTools.value);
 	}
 );
 
@@ -382,7 +382,7 @@ function getActionId(id: string): string {
 function restoreTool(id: string): void {
 	const actionId = getActionId(id);
 	emit('tool-action', `${actionId}:restore`);
-	activeTools.value.delete(id);
+	toolStore.deactivate(id);
 }
 
 /**
@@ -392,7 +392,7 @@ function restoreTool(id: string): void {
  */
 function restoreToolsInItems(items: ToolItem[]): void {
 	for (const item of items) {
-		if (activeTools.value.has(item.id)) {
+		if (toolStore.isActive(item.id)) {
 			restoreTool(item.id);
 		}
 	}
@@ -421,7 +421,7 @@ const handleSelect = (item: ToolItem) => {
 	} else if (item.activatable) {
 		const actionId = getActionId(item.id);
 
-		if (activeTools.value.has(item.id)) {
+		if (toolStore.isActive(item.id)) {
 			// 已激活 → 取消激活，恢复原始效果
 			restoreTool(item.id);
 			if (item.color) {
@@ -430,15 +430,14 @@ const handleSelect = (item: ToolItem) => {
 		} else {
 			// 未激活 → 检查同组工具，先恢复再激活
 			if (item.group) {
-				for (const otherId of activeTools.value) {
+				for (const otherId of toolStore.activeTools) {
 					const other = findItemById(tools, otherId);
 					if (other?.group === item.group) {
 						restoreTool(otherId);
 					}
 				}
 			}
-			activeTools.value.add(item.id);
-			activeTools.value = new Set(activeTools.value);
+			toolStore.activate(item.id);
 			if (item.color) {
 				selectedColor.value = item.defaultColor ?? '#ffffff';
 				emit('tool-action', actionId, selectedColor.value);
@@ -532,8 +531,8 @@ const handleBreadcrumbClick = (index: number) => {
 								<button
 									v-for="(item, index) in currentItems"
 									:key="item.id"
-									class="toolbar-item"
-									:class="{ activated: activeTools.has(item.id) }"
+								class="toolbar-item"
+								:class="{ activated: toolStore.isActive(item.id) }"
 									:style="{ '--delay': `${index * 40}ms` }"
 									@click.stop="!didDrag && handleSelect(item)"
 								>

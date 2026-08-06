@@ -6,8 +6,11 @@
 
 - 加载并展示 `.glb` 格式 3D 模型，支持 PBR 材质渲染
 - TrackballControls 轨道控制（旋转、缩放、平移）
-- 材质切换（线框模式、纯色模式）+ 实时颜色选择器
+- 材质切换（线框模式、纯色模式）+ 实时颜色选择器（HEX/RGB）
 - 移动模式切换（轨道控制 / 平移拖拽）
+- 底部工具栏：多级菜单 + 面包屑导航 + 拖拽滚动 + 渐变遮罩
+- 径向菜单（RadialMenu）：右下角快捷设置菜单
+- 工具栏与径向菜单共享激活状态（Pinia Store）
 - 策略模式工具栏：创建 handler 文件 + 注册即可扩展新工具
 
 ## 技术栈
@@ -18,7 +21,7 @@
 | 3D 引擎  | Three.js 0.184                            |
 | 构建工具 | Vite 8 + TypeScript 6                     |
 | 状态管理 | Pinia 3                                   |
-| 样式     | SCSS                                      |
+| 样式     | SCSS（Element Plus 设计规范）             |
 | 代码规范 | Oxlint + ESLint + Prettier                |
 
 ## 快速开始
@@ -55,7 +58,9 @@ pnpm dev
 ### 工具调用流程
 
 ```
-用户点击菜单项
+用户点击菜单项（ToolBar 或 RadialMenu）
+    ↓
+菜单组件通过 toolStore 切换激活状态
     ↓
 ToolBar 触发 'tool-action' 事件
     ↓
@@ -71,13 +76,16 @@ src/
 ├── composables/
 │   └── useThreeScene.ts    # 3D 场景状态 + 生命周期管理
 ├── components/
-│   ├── ToolBar/            # 底部工具栏（多级菜单 + 面包屑 + 颜色选择器）
-│   ├── RadialMenu/         # 右下角径向设置菜单
-│   └── ModelLoader/        # 模型加载遮罩层（进度条）
+│   ├── ToolBar/            # 底部工具栏（多级菜单 + 面包屑 + 拖拽滚动 + 颜色选择器）
+│   ├── RadialMenu/         # 右下角径向设置菜单（与 ToolBar 共享激活状态）
+│   ├── ModelLoader/        # 模型加载遮罩层（进度条）
+│   └── SvgIcon/            # SVG 图标组件
+├── stores/
+│   └── tool.ts             # 工具状态管理（Pinia Store，ToolBar + RadialMenu 共享）
 ├── tools/                  # 工具处理器（策略模式）
 │   ├── types.ts            # ToolContext 接口 + ToolHandler 类型
 │   ├── index.ts            # action → handler 注册表
-│   ├── material.ts         # 材质工具（线框/纯色）
+│   ├── material.ts         # 材质工具（线框/纯色 + 颜色选择器）
 │   └── *.ts                # 每个功能一个文件
 ├── three/                  # Three.js 模块化封装
 │   ├── renderer.ts         # WebGL 渲染器
@@ -89,6 +97,14 @@ src/
 └── utils/
     └── tree.ts             # 通用树形查找工具
 ```
+
+### 菜单联动
+
+ToolBar 和 RadialMenu 通过 Pinia Store（`src/stores/tool.ts`）共享激活状态：
+
+- 两个菜单中相同功能的菜单项使用**相同的 ID**（如 `material-wireframe`）
+- 任一菜单激活/取消工具，另一个菜单自动同步高亮
+- 可切换工具必须提供 `:restore` 后缀的 handler 用于恢复原始状态
 
 ### 新增工具
 
@@ -131,6 +147,9 @@ const tools: ToolItem[] = [
 ];
 ```
 
+> [!NOTE]
+> 若需在 RadialMenu 中也显示此工具，需在 RadialMenu 的 `menuItems` 中添加**相同 ID** 的菜单项。
+
 ### ToolItem 接口
 
 ```ts
@@ -167,6 +186,28 @@ interface ToolContext {
 	setMoveSpeed: (speed: number) => void;
 }
 ```
+
+## 工具栏特性
+
+### 拖拽滚动
+
+工具栏内容溢出时支持鼠标拖拽滚动：
+- 按住拖拽：工具栏跟随鼠标移动
+- 松开后：惯性滚动（逐渐减速）
+- 拖拽距离 > 5px 时阻止点击事件，避免误触菜单
+
+### 响应式设计
+
+- 使用 CSS `clamp()` 实现流式缩放，适配 360px ~ 2560px 设备
+- 容器宽度 < 480px 时隐藏面包屑和文字标签（仅图标）
+- 容器宽度 ≥ 768px 时显示面包屑
+
+### 颜色选择器
+
+材质工具（线框/纯色）激活时显示颜色选择器：
+- 色盘选择 + HEX/RGB 模式切换
+- 文本输入框支持手动输入颜色值
+- 实时预览：选色后立即应用到模型
 
 ## 代码规范
 
