@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import SvgIcon from '@/components/SvgIcon/index.vue';
 import { findItemById } from '@/utils/tree';
+import { useToolStore } from '@/stores/tool';
 
 interface MenuItem {
 	id: string;
@@ -27,12 +28,12 @@ const emit = defineEmits<{
 	activate: [id: string, activated: boolean];
 }>();
 
+const toolStore = useToolStore();
 const isOpen = ref(false);
 const activeStack = ref<string[]>([]);
-const activatedItemId = ref<string | null>(null);
 const hoveredItem = ref<string | null>(null);
 const menuRef = ref<HTMLDivElement>();
-// 
+
 const menuItems: MenuItem[] = [
 	{
 		id: 'settings',
@@ -50,7 +51,7 @@ const menuItems: MenuItem[] = [
 		label: '相机',
 		children: [
 			{ id: 'camera-reset', icon: 'reset', label: '重置视角' },
-			{ id: 'camera-front', icon: 'view', label: '正视图' },
+			{ id: 'view-front', icon: 'view', label: '正视图', activatable: true },
 			{ id: 'camera-perspective', icon: 'view', label: '透视图', activatable: true },
 		],
 	},
@@ -60,7 +61,7 @@ const menuItems: MenuItem[] = [
 		label: '信息',
 		children: [
 			{ id: 'info-stats', icon: 'stats', label: '统计信息' },
-			{ id: 'info-wireframe', icon: 'wireframe', label: '线框模式', activatable: true },
+			{ id: 'material-wireframe', icon: 'wireframe', label: '线框模式', activatable: true },
 		],
 	},
 	{
@@ -104,7 +105,6 @@ const handleToggle = () => {
 const resetMenu = () => {
 	activeStack.value = [];
 	currentItems.value = menuItems;
-	activatedItemId.value = null;
 	hoveredItem.value = null;
 };
 
@@ -113,7 +113,7 @@ const resetMenu = () => {
  *
  * @description 根据菜单项类型执行不同操作：
  * - 有子菜单：进入下一级列表菜单
- * - 可激活型：切换高亮状态并触发 activate 事件
+ * - 可激活型：通过 toolStore 切换激活状态
  * - 普通型：触发 select 事件
  *
  * @param {MenuItem} item - 被点击的菜单项
@@ -122,11 +122,9 @@ const handleSelect = (item: MenuItem) => {
 	if (item.children && item.children.length > 0) {
 		activeStack.value.push(item.id);
 		currentItems.value = item.children;
-		activatedItemId.value = null;
 	} else if (item.activatable) {
-		const isActivating = activatedItemId.value !== item.id;
-		activatedItemId.value = isActivating ? item.id : null;
-		emit('activate', item.id, isActivating);
+		const isNowActive = toolStore.toggle(item.id);
+		emit('activate', item.id, isNowActive);
 	} else {
 		emit('select', item);
 	}
@@ -139,7 +137,6 @@ const handleSelect = (item: MenuItem) => {
  */
 const handleBack = () => {
 	activeStack.value.pop();
-	activatedItemId.value = null;
 	if (activeStack.value.length === 0) {
 		currentItems.value = menuItems;
 	} else {
@@ -254,7 +251,7 @@ const getItemPosition = (index: number, total: number) => {
 						v-for="item in currentItems"
 						:key="item.id"
 						class="list-item"
-						:class="{ activated: activatedItemId === item.id }"
+						:class="{ activated: toolStore.isActive(item.id) }"
 						@click.stop="handleSelect(item)"
 					>
 						<SvgIcon :name="item.icon" :size="16" />
