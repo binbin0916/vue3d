@@ -204,8 +204,8 @@ export function useThreeScene() {
 	 * @param {HTMLElement} container - 渲染器 canvas 要挂载的 DOM 容器
 	 * @param {string} code - 业务编码（暂未使用，保留扩展）
 	 */
-	const init = async (container: HTMLElement, _code: string) => {
-		const path = `${MODEL_PATH}IPTH8-20.glb`;
+	const init = async (container: HTMLElement, code: string) => {
+		const path = `${MODEL_PATH}${code}.glb`;
 		const MIN_DISPLAY_TIME = 1000; // 最小loading时长
 
 		containerElement = container;

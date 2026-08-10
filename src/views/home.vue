@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { useThreeScene } from '@/composables/useThreeScene';
 import { toolRegistry } from '@/tools';
 import type { ToolContext } from '@/tools';
+import { useToolStore } from '@/stores/tool';
 import ModelLoader from '@/components/ModelLoader/index.vue';
 import ToolBar from '@/components/ToolBar/index.vue';
 import RadialMenu from '@/components/RadialMenu/index.vue';
 import DraggableDialog from '@/components/DraggableDialog/index.vue';
+import ColorPicker from '@/components/ColorPicker/index.vue';
+
+const toolStore = useToolStore();
 
 const {
 	init,
@@ -54,10 +58,44 @@ const toolContext: ToolContext = {
 	setMoveSpeed,
 };
 
+// ---- 颜色弹窗状态 ----
+const showColorDialog = ref(false);
+const currentColor = ref('#ffffff');
+const activeColorToolId = ref('');
+
+/**
+ * 检查是否有颜色工具激活，显示/隐藏颜色弹窗
+ */
+watch(
+	() => toolStore.activeTools,
+	() => {
+		let foundColorTool = false;
+		for (const id of toolStore.activeTools) {
+			// 通过 toolRegistry 检查是否是材质工具（带颜色）
+			if (id.startsWith('material-wireframe') || id.startsWith('material-solid')) {
+				foundColorTool = true;
+				activeColorToolId.value = id;
+				break;
+			}
+		}
+		showColorDialog.value = foundColorTool;
+		if (!foundColorTool) activeColorToolId.value = '';
+	},
+	{ deep: true }
+);
+
+/**
+ * handleColorChange - 颜色选择器变化处理
+ */
+const handleColorChange = (color: string) => {
+	currentColor.value = color;
+	if (activeColorToolId.value) {
+		handleToolAction(activeColorToolId.value, color);
+	}
+};
+
 /**
  * handleToolAction - 统一处理工具动作
- *
- * @description ToolBar 和 RadialMenu 的动作都通过此函数分发到 toolRegistry
  */
 const handleToolAction = (action: string, payload?: any) => {
 	const handler = toolRegistry[action];
@@ -109,6 +147,12 @@ onUnmounted(() => {
 		<ModelLoader :loading="loading" :loaded="loadProgress.loaded" :total="loadProgress.total" :percent="loadProgress.percent" />
 		<RadialMenu @select="handleRadialSelect" @activate="handleRadialActivate" />
 		<ToolBar :is-move-mode="isMoveMode" @tool-action="handleToolAction" />
+
+		<!-- 颜色选择弹窗 -->
+		<DraggableDialog v-model="showColorDialog" title="颜色选择" width="320px" top="120px">
+			<ColorPicker v-model="currentColor" @change="handleColorChange" />
+		</DraggableDialog>
+		<!--  -->
 	</div>
 </template>
 
