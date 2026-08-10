@@ -52,129 +52,6 @@ const emit = defineEmits<{
 
 const activeStack = ref<string[]>([]);
 const toolStore = useToolStore();
-const selectedColor = ref('#ffffff');
-const colorMode = ref<'hex' | 'rgb'>('hex');
-
-/**
- * showColorPicker - 是否显示颜色选择器
- *
- * @description 当前激活的菜单项支持 color 属性时显示
- */
-const showColorPicker = computed(() => {
-	if (toolStore.activeTools.size === 0) return false;
-	for (const id of toolStore.activeTools) {
-		const item = findItemById(tools, id);
-		if (item?.color === true) return true;
-	}
-	return false;
-});
-
-/**
- * colorInputValue - 颜色输入框显示值
- *
- * @description 根据当前模式格式化颜色值：HEX 显示 #xxx，RGB 显示 R, G, B
- */
-const colorInputValue = computed(() => {
-	if (colorMode.value === 'rgb') {
-		const hex = selectedColor.value.replace('#', '');
-		const r = parseInt(hex.substring(0, 2), 16);
-		const g = parseInt(hex.substring(2, 4), 16);
-		const b = parseInt(hex.substring(4, 6), 16);
-		return `${r}, ${g}, ${b}`;
-	}
-	return selectedColor.value.toUpperCase();
-});
-
-/**
- * parseHexColor - 解析 HEX 颜色字符串
- *
- * @description 支持 #RGB 和 #RRGGBB 格式，自动补全 #
- *
- * @param {string} input - 用户输入的颜色字符串
- * @returns {string | null} 标准化的 7 位 HEX 颜色（#rrggbb），无效返回 null
- */
-function parseHexColor(input: string): string | null {
-	const hex = input.startsWith('#') ? input : `#${input}`;
-	const match = hex.match(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/);
-	if (!match) return null;
-	const group = match[1];
-	if (!group) return null;
-	const full =
-		group.length === 3
-			? group
-					.split('')
-					.map((c) => c + c)
-					.join('')
-			: group;
-	return `#${full.toLowerCase()}`;
-}
-
-/**
- * parseRgbColor - 解析 RGB 颜色字符串
- *
- * @description 支持 "R, G, B"、"R G B"、"R,G,B" 等分隔格式，值范围 0-255
- *
- * @param {string} input - 用户输入的颜色字符串
- * @returns {string | null} 标准化的 7 位 HEX 颜色（#rrggbb），无效返回 null
- */
-function parseRgbColor(input: string): string | null {
-	const parts = input.split(/[\s,]+/).filter(Boolean);
-	if (parts.length !== 3) return null;
-	const r = Number(parts[0]);
-	const g = Number(parts[1]);
-	const b = Number(parts[2]);
-	if ([r, g, b].some((n) => isNaN(n) || n < 0 || n > 255)) return null;
-	const toHex = (n: number) => Math.round(n).toString(16).padStart(2, '0');
-	return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
-
-/**
- * handleColorInput - 文本输入框颜色解析
- *
- * @description 根据当前模式（HEX/RGB）解析输入值，无效输入不更新颜色
- *
- * @param {Event} e - input 事件
- */
-const handleColorInput = (e: Event) => {
-	const raw = (e.target as HTMLInputElement).value;
-	const hex = colorMode.value === 'hex' ? parseHexColor(raw) : parseRgbColor(raw);
-	if (hex) {
-		selectedColor.value = hex;
-		for (const id of toolStore.activeTools) {
-			const item = findItemById(tools, id);
-			if (item?.color) {
-				emit('tool-action', id, hex);
-			}
-		}
-	}
-};
-
-/**
- * handleSwatchInput - 原生色盘选择处理
- *
- * @description 直接使用 input[type=color] 返回的 HEX 值同步更新
- *
- * @param {Event} e - input 事件
- */
-const handleSwatchInput = (e: Event) => {
-	const color = (e.target as HTMLInputElement).value;
-	selectedColor.value = color;
-	for (const id of toolStore.activeTools) {
-		const item = findItemById(tools, id);
-		if (item?.color) {
-			emit('tool-action', id, color);
-		}
-	}
-};
-
-/**
- * toggleColorMode - 切换 HEX/RGB 输入模式
- *
- * @description 在 HEX 和 RGB 之间切换，输入框显示值自动同步
- */
-const toggleColorMode = () => {
-	colorMode.value = colorMode.value === 'hex' ? 'rgb' : 'hex';
-};
 
 watch(
 	() => props.isMoveMode,
@@ -424,9 +301,6 @@ const handleSelect = (item: ToolItem) => {
 		if (toolStore.isActive(item.id)) {
 			// 已激活 → 取消激活，恢复原始效果
 			restoreTool(item.id);
-			if (item.color) {
-				selectedColor.value = item.defaultColor ?? '#ffffff';
-			}
 		} else {
 			// 未激活 → 检查同组工具，先恢复再激活
 			if (item.group) {
@@ -439,8 +313,7 @@ const handleSelect = (item: ToolItem) => {
 			}
 			toolStore.activate(item.id);
 			if (item.color) {
-				selectedColor.value = item.defaultColor ?? '#ffffff';
-				emit('tool-action', actionId, selectedColor.value);
+				emit('tool-action', actionId, item.defaultColor ?? '#ffffff');
 			} else {
 				emit('tool-action', actionId);
 			}
@@ -531,8 +404,8 @@ const handleBreadcrumbClick = (index: number) => {
 								<button
 									v-for="(item, index) in currentItems"
 									:key="item.id"
-								class="toolbar-item"
-								:class="{ activated: toolStore.isActive(item.id) }"
+									class="toolbar-item"
+									:class="{ activated: toolStore.isActive(item.id) }"
 									:style="{ '--delay': `${index * 40}ms` }"
 									@click.stop="!didDrag && handleSelect(item)"
 								>
@@ -557,26 +430,6 @@ const handleBreadcrumbClick = (index: number) => {
 							<line x1="6" y1="6" x2="18" y2="18" />
 						</svg>
 					</button>
-
-					<!-- 颜色选择器：线框/纯色模式 -->
-					<template v-if="showColorPicker">
-						<span class="color-divider"></span>
-						<div class="color-swatch-wrap">
-							<input type="color" class="color-swatch" :value="selectedColor" @input="handleSwatchInput" />
-						</div>
-						<button class="color-mode-btn" @click="toggleColorMode" :title="colorMode === 'hex' ? '切换为 RGB' : '切换为 HEX'">
-							{{ colorMode === 'hex' ? 'HEX' : 'RGB' }}
-						</button>
-						<input
-							type="text"
-							class="color-text-input"
-							:value="colorInputValue"
-							@input="handleColorInput"
-							:placeholder="colorMode === 'hex' ? '#000000' : '0, 0, 0'"
-							spellcheck="false"
-							autocomplete="off"
-						/>
-					</template>
 				</div>
 			</div>
 		</Transition>

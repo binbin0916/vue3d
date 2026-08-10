@@ -115,7 +115,7 @@ function clamp(val: number, min: number, max: number): number {
 
 function centerDialog() {
 	const w = dialogWidth.value || 400;
-	dialogLeft.value = (window.innerWidth - w) / 2;
+	dialogLeft.value = window.innerWidth - w - 40;
 	dialogTop.value = parseInt(props.top) || 80;
 }
 
