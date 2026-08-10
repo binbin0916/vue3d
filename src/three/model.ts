@@ -2,6 +2,15 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 /**
+ * TARGET_SIZE - 模型统一缩放目标尺寸
+ *
+ * @description 所有导入模型包围盒最大边将被缩放到该值（单位），
+ * 使不同尺寸的模型在场景中呈现一致的视觉大小。
+ * 缩放仅作用于 scene 根节点，不影响 modelSize 的原始尺寸语义。
+ */
+const TARGET_SIZE = 50;
+
+/**
  * ModelResult - 模型加载结果
  *
  * @description 封装 GLTFLoader 加载完成后的模型数据
@@ -89,6 +98,11 @@ export function loadModel(url: string, onProgress?: (_progress: LoadProgress) =>
 				const size = new THREE.Vector3();
 				box.getSize(size);
 				const modelSize = Math.max(size.x, size.y, size.z);
+
+				// 自适应缩放：将模型包围盒最大边统一缩放到 TARGET_SIZE，
+				// 保持 modelSize 原始值不变，作为相机、灯光、控制器的尺寸基准
+				const scaleFactor = TARGET_SIZE / modelSize;
+				scene.scale.setScalar(scaleFactor);
 
 				const group = new THREE.Object3D();
 				group.rotation.set(Math.PI / 4, -Math.PI / 4, Math.PI / 4);
