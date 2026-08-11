@@ -265,6 +265,40 @@ export function useThreeScene() {
 				},
 			});
 
+			cube.on('faceClick', (faceId, config) => {
+				console.log('Navigate to:', faceId, config);
+				// Get initial camera distance (保持初始距离不变)
+				const initialDistance = camera.value.position.length();
+
+				// Calculate target position with same distance
+				const targetDirection = new THREE.Vector3(config.position.x, config.position.y, config.position.z).normalize();
+				const targetPos = targetDirection.multiplyScalar(initialDistance);
+
+				const startPos = camera.value.position.clone();
+				const startUp = camera.value.up.clone();
+				const targetUp = new THREE.Vector3(config.up.x, config.up.y, config.up.z);
+
+				const duration = 500;
+				const startTime = performance.now();
+
+				function animateCamera() {
+					const elapsed = performance.now() - startTime;
+					const progress = Math.min(elapsed / duration, 1);
+					const eased = progress;
+
+					camera.value.position.lerpVectors(startPos, targetPos, eased);
+					camera.value.up.lerpVectors(startUp, targetUp, eased).normalize();
+					camera.value.lookAt(0, 0, 0);
+					controls.value.update();
+
+					if (progress < 1) {
+						requestAnimationFrame(animateCamera);
+					}
+				}
+
+				animateCamera();
+			});
+
 			animate();
 			window.addEventListener('resize', onResize);
 
