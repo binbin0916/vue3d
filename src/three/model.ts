@@ -8,7 +8,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
  * 使不同尺寸的模型在场景中呈现一致的视觉大小。
  * 缩放仅作用于 scene 根节点，不影响 modelSize 的原始尺寸语义。
  */
-const TARGET_SIZE = 10;
+const TARGET_SIZE = 50;
 
 /**
  * ModelResult - 模型加载结果
