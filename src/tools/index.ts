@@ -1,6 +1,6 @@
 import type { ToolHandler } from './types';
 import { toggleMove, setMoveSpeed } from './move';
-import { viewFront, viewBack, viewLeft, viewRight, viewTop, viewBottom } from './view';
+import { viewFront, viewBack, viewLeft, viewRight, viewTop, viewBottom, viewOrigin } from './view';
 import { measureDistance, measureAngle, measureArea } from './measure';
 import { annotateText, annotatePin } from './annotate';
 import { sectionPlaneX, sectionPlaneY, sectionPlaneZ, sectionBoxInner, sectionBoxOuter, sectionCustom } from './section';
@@ -14,6 +14,8 @@ import { exportScreenshot, exportGlb, exportGltf } from './export';
  * 新增工具时只需：1) 创建处理器文件  2) 在此注册
  */
 export const toolRegistry: Record<string, ToolHandler> = {
+	// 返回原点
+	'return-origin': viewOrigin,
 	// 移动
 	'move:toggle': toggleMove,
 	'move:setSpeed': setMoveSpeed,
