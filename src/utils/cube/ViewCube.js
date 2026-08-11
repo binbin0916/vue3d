@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ViewCubeMesh } from './ViewCubeMesh.js';
-import { FACES, getFaceConfigs } from './faces.js';
+import { FACES, getFaceConfigs, getModelRotations } from './faces.js';
 
 /**
  * ViewCube - A customizable 3D orientation cube for Three.js and Potree
@@ -53,6 +53,7 @@ export class ViewCube {
 			showOutline: options.showOutline !== false,
 			showEdges: options.showEdges !== false,
 			showCorners: options.showCorners !== false,
+			modelRotation: options.modelRotation || null, // NEW: initial model rotation
 		};
 
 		this._eventListeners = {};
@@ -109,8 +110,15 @@ export class ViewCube {
 		});
 		this._scene.add(this._cube);
 
+		// Apply initial model rotation if provided
+		if (this._options.modelRotation) {
+			this._cube.rotation.copy(this._options.modelRotation);
+			this._renderer.render(this._scene, this._camera);
+		}
+
 		// Get face configurations
 		this._faceConfigs = getFaceConfigs(this._options.coordinateSystem, this._options.cameraDistance);
+		this._faceRotations = getModelRotations(this._options.coordinateSystem);
 
 		// Setup event listeners
 		this._setupEventListeners();
@@ -244,6 +252,27 @@ export class ViewCube {
 	}
 
 	/**
+	 * Set cube rotation directly (for syncing with modelGroup)
+	 * @param {THREE.Euler} rotation - The rotation to apply
+	 */
+	setRotation(rotation) {
+		if (rotation) {
+			this._cube.rotation.copy(rotation);
+		}
+		this._renderer.render(this._scene, this._camera);
+	}
+
+	/**
+	 * Get model rotation for a face click
+	 * @param {string|number} faceId - Face ID
+	 * @returns {THREE.Euler|null} Target rotation for the model
+	 */
+	getModelRotation(faceId) {
+		const rotations = this._faceRotations || {};
+		return rotations[faceId] || null;
+	}
+
+	/**
 	 * Add event listener
 	 * @param {string} event - Event name: 'faceClick', 'drag'
 	 * @param {Function} callback - Event handler
@@ -345,4 +374,4 @@ export class ViewCube {
 }
 
 // Export constants
-export { FACES, getFaceConfigs } from './faces.js';
+export { FACES, getFaceConfigs, getModelRotations } from './faces.js';

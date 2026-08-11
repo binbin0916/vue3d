@@ -13,7 +13,18 @@ import * as THREE from 'three';
 export function createCamera(modelSize: number, lookAt: THREE.Vector3): THREE.PerspectiveCamera {
 	const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, modelSize / 20, 1000);
 
-	camera.position.set(0, modelSize, modelSize * 2);
+	// camera.position.set(0, 0, modelSize * 2);
+
+	const distance = modelSize * 2;
+	const theta = Math.PI / 4; // 水平角 (绕Y轴)
+	const phi = Math.PI / 4; // 俯仰角 (从Y轴向下)
+
+	const x = distance * Math.sin(theta) * Math.cos(phi);
+	const y = distance * Math.sin(phi);
+	const z = distance * Math.cos(theta) * Math.cos(phi);
+
+	camera.position.set(x, y, z);
+
 	camera.lookAt(lookAt);
 
 	return camera;

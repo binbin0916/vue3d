@@ -203,3 +203,59 @@ function getCornerConfigs(system, d) {
 export function getFaceName(faceId) {
 	return Object.keys(FACES).find((key) => FACES[key] === faceId) || 'UNKNOWN';
 }
+
+/**
+ * Get model rotation angles for each face (for Y-up coordinate system)
+ * These rotations will be applied to modelGroup when a face is clicked
+ */
+export function getModelRotations(coordinateSystem = 'Y-up') {
+	if (coordinateSystem === 'Z-up') {
+		return getZUpModelRotations();
+	}
+	return getYUpModelRotations();
+}
+
+function getYUpModelRotations() {
+	return {
+		[FACES.TOP]: { x: Math.PI / 2, y: 0, z: 0 },
+		[FACES.FRONT]: { x: 0, y: 0, z: 0 },
+		[FACES.RIGHT]: { x: 0, y: -Math.PI / 2, z: 0 },
+		[FACES.BACK]: { x: 0, y: -Math.PI, z: 0 },
+		[FACES.LEFT]: { x: 0, y: Math.PI / 2, z: 0 },
+		[FACES.BOTTOM]: { x: -Math.PI / 2, y: 0, z: 0 },
+		// Edges
+		[FACES.TOP_FRONT_EDGE]: { x: Math.PI / 4, y: 0, z: 0 },
+		[FACES.TOP_RIGHT_EDGE]: { x: Math.PI / 4, y: -Math.PI / 2, z: 0 },
+		[FACES.TOP_BACK_EDGE]: { x: Math.PI / 4, y: -Math.PI, z: 0 },
+		[FACES.TOP_LEFT_EDGE]: { x: Math.PI / 4, y: Math.PI / 2, z: 0 },
+		[FACES.FRONT_RIGHT_EDGE]: { x: 0, y: -Math.PI / 4, z: 0 },
+		[FACES.BACK_RIGHT_EDGE]: { x: 0, y: (-Math.PI * 3) / 4, z: 0 },
+		[FACES.BACK_LEFT_EDGE]: { x: 0, y: (Math.PI * 3) / 4, z: 0 },
+		[FACES.FRONT_LEFT_EDGE]: { x: 0, y: Math.PI / 4, z: 0 },
+		[FACES.BOTTOM_FRONT_EDGE]: { x: -Math.PI / 4, y: 0, z: 0 },
+		[FACES.BOTTOM_RIGHT_EDGE]: { x: -Math.PI / 4, y: -Math.PI / 2, z: 0 },
+		[FACES.BOTTOM_BACK_EDGE]: { x: -Math.PI / 4, y: -Math.PI, z: 0 },
+		[FACES.BOTTOM_LEFT_EDGE]: { x: -Math.PI / 4, y: Math.PI / 2, z: 0 },
+		// Corners
+		[FACES.TOP_FRONT_RIGHT_CORNER]: { x: Math.PI / 4, y: -Math.PI / 4, z: 0 },
+		[FACES.TOP_BACK_RIGHT_CORNER]: { x: Math.PI / 4, y: (-Math.PI * 3) / 4, z: 0 },
+		[FACES.TOP_BACK_LEFT_CORNER]: { x: Math.PI / 4, y: (Math.PI * 3) / 4, z: 0 },
+		[FACES.TOP_FRONT_LEFT_CORNER]: { x: Math.PI / 4, y: Math.PI / 4, z: 0 },
+		[FACES.BOTTOM_FRONT_RIGHT_CORNER]: { x: -Math.PI / 4, y: -Math.PI / 4, z: 0 },
+		[FACES.BOTTOM_BACK_RIGHT_CORNER]: { x: -Math.PI / 4, y: (-Math.PI * 3) / 4, z: 0 },
+		[FACES.BOTTOM_BACK_LEFT_CORNER]: { x: -Math.PI / 4, y: (Math.PI * 3) / 4, z: 0 },
+		[FACES.BOTTOM_FRONT_LEFT_CORNER]: { x: -Math.PI / 4, y: Math.PI / 4, z: 0 },
+	};
+}
+
+function getZUpModelRotations() {
+	// Z-up rotations (different mapping)
+	return {
+		[FACES.TOP]: { x: 0, y: 0, z: 0 },
+		[FACES.FRONT]: { x: Math.PI / 2, y: 0, z: 0 },
+		[FACES.RIGHT]: { x: 0, y: Math.PI / 2, z: 0 },
+		[FACES.BACK]: { x: -Math.PI / 2, y: 0, z: 0 },
+		[FACES.LEFT]: { x: 0, y: -Math.PI / 2, z: 0 },
+		[FACES.BOTTOM]: { x: Math.PI, y: 0, z: 0 },
+	};
+}
