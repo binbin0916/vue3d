@@ -36,3 +36,5 @@ export const viewRight: ToolHandler = (ctx) => setViewAngle(ctx, 'right');
 export const viewTop: ToolHandler = (ctx) => setViewAngle(ctx, 'top');
 /** 仰视图 */
 export const viewBottom: ToolHandler = (ctx) => setViewAngle(ctx, 'bottom');
+
+export const viewOrigin: ToolHandler = (ctx) => setViewAngle(ctx, 'top_front_right_corner');

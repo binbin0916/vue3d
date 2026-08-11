@@ -66,6 +66,11 @@ watch(
 
 const tools: ToolItem[] = [
 	{
+		id: 'return-origin',
+		icon: 'home',
+		label: '返回原点',
+	},
+	{
 		id: 'move',
 		icon: 'move',
 		label: '移动',
