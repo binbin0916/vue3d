@@ -271,6 +271,45 @@ export function useThreeScene() {
 				rotateToView(targetPos, targetUp);
 			});
 
+			cube.on('drag', (deltaX, deltaY) => {
+				const rotationSpeed = 0.005;
+				const target = new THREE.Vector3(0, 0, 0);
+
+				// Get the offset from target
+				const offset = camera.value.position.clone().sub(target);
+				const distance = offset.length();
+
+				// Get view direction (from camera to target)
+				const viewDir = offset.clone().normalize().negate();
+
+				// Calculate right vector from cross product of view direction and world up
+				// This works correctly at all angles including poles
+				const worldUp = new THREE.Vector3(0, 1, 0);
+				const right = new THREE.Vector3().crossVectors(viewDir, worldUp);
+
+				// Handle pole case: when looking straight up or down, right vector is zero
+				if (right.lengthSq() < 0.001) {
+					// Use camera's last known right direction or fallback
+					right.set(1, 0, 0);
+				} else {
+					right.normalize();
+				}
+
+				// Rotate around world Y-axis for horizontal movement
+				const rotY = new THREE.Quaternion().setFromAxisAngle(worldUp, -deltaX * rotationSpeed);
+				offset.applyQuaternion(rotY);
+
+				// Rotate around the right axis for vertical movement
+				const rotX = new THREE.Quaternion().setFromAxisAngle(right, -deltaY * rotationSpeed);
+				offset.applyQuaternion(rotX);
+
+				// Apply new position, maintaining distance
+				offset.normalize().multiplyScalar(distance);
+				camera.value.position.copy(target).add(offset);
+				camera.value.lookAt(target);
+				controls.value.update();
+			});
+
 			animate();
 			window.addEventListener('resize', onResize);
 
@@ -315,14 +354,21 @@ export function useThreeScene() {
 		// 保持初始距离不变
 		const initialDistance = camera.value.position.length();
 
-		// 计算目标方向（归一化）
+		// 计算起始和目标方向（归一化）
+		const startDirection = camera.value.position.clone().normalize();
 		const targetDirection = targetPosition.clone().normalize();
 
-		// 计算起始方向（归一化）
-		const startDirection = camera.value.position.clone().normalize();
+		// 使用四元数球面插值（slerp）处理任意角度，包括180度
+		const startQuat = new THREE.Quaternion().setFromUnitVectors(
+			new THREE.Vector3(0, 0, 1), // 参考方向
+			startDirection
+		);
+		const targetQuat = new THREE.Quaternion().setFromUnitVectors(
+			new THREE.Vector3(0, 0, 1), // 参考方向
+			targetDirection
+		);
 
 		const startUp = camera.value.up.clone();
-
 		const startTime = performance.now();
 
 		function animateCamera() {
@@ -330,8 +376,12 @@ export function useThreeScene() {
 			const progress = Math.min(elapsed / duration, 1);
 			const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
 
-			// 在球面空间插值方向，保持距离恒定
-			const currentDirection = new THREE.Vector3().lerpVectors(startDirection, targetDirection, eased).normalize();
+			// 使用四元数slerp进行球面插值
+			const currentQuat = new THREE.Quaternion();
+			currentQuat.slerpQuaternions(startQuat, targetQuat, eased);
+
+			// 将四元数转换回方向向量
+			const currentDirection = new THREE.Vector3(0, 0, 1).applyQuaternion(currentQuat);
 			camera.value!.position.copy(currentDirection.multiplyScalar(initialDistance));
 
 			camera.value!.up.lerpVectors(startUp, targetUp, eased).normalize();
