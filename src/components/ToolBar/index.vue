@@ -89,9 +89,9 @@ const tools: ToolItem[] = [
 		icon: 'measure',
 		label: '测量',
 		children: [
-			{ id: 'measure-distance', icon: 'measure', label: '距离测量', activatable: true },
-			{ id: 'measure-angle', icon: 'measure', label: '角度测量', activatable: true },
-			{ id: 'measure-area', icon: 'measure', label: '面积测量', activatable: true },
+			{ id: 'measure-distance', icon: 'measure', label: '距离测量', activatable: true, group: 'measure' },
+			{ id: 'measure-angle', icon: 'measure', label: '角度测量', activatable: true, group: 'measure' },
+			{ id: 'measure-area', icon: 'measure', label: '面积测量', activatable: true, group: 'measure' },
 		],
 	},
 	{

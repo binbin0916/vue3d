@@ -3,6 +3,10 @@ import { shallowRef, ref } from 'vue';
 import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
 import { createRenderer, createScene, createCamera, addLights, loadModel, createControls } from '@/three';
 import type { LoadProgress } from '@/three';
+// import { useViewCube } from './useViewCube';
+
+import { ViewCube } from '@/utils/cube';
+import type { ViewCube as TypeViewCube } from '@/utils/cube';
 
 const MODEL_PATH = '/model/get/';
 
@@ -42,6 +46,8 @@ export function useThreeScene() {
 	const loadProgress = ref<LoadProgress>({ loaded: 0, total: 0, percent: 0 });
 	const modelSize = ref(0);
 
+	let cube: TypeViewCube;
+
 	// 移动模式状态
 	const isMoveMode = ref(false);
 	const moveSpeed = ref(1);
@@ -70,6 +76,11 @@ export function useThreeScene() {
 	const animate = () => {
 		rafId = requestAnimationFrame(animate);
 		render();
+
+		if (cube && modelGroup.value) {
+			cube.setRotation(modelGroup.value.rotation);
+			cube.update(camera.value);
+		}
 
 		if (!isMoveMode.value && controls.value.enabled) {
 			controls.value.update();
@@ -228,6 +239,31 @@ export function useThreeScene() {
 			camera.value = createCamera(result.modelSize, modelGroup.value.position);
 			addLights(scene.value, result.modelSize);
 			controls.value = createControls(camera.value, renderer.value.domElement, result.modelSize);
+			// Initialize ViewCube
+			cube = new ViewCube({
+				container: container,
+				coordinateSystem: 'Y-up',
+				size: 120,
+				position: 'top-right',
+				cameraDistance: 10,
+				modelRotation: modelGroup.value.rotation,
+				colors: {
+					main: 0xe0e0e0,
+					hover: 0x87ceeb,
+					outline: 0x555555,
+				},
+				labels: {
+					top: '上',
+					bottom: '下',
+					front: '前',
+					back: '后',
+					left: '左',
+					right: '右',
+				},
+				font: {
+					size: 60,
+				},
+			});
 
 			animate();
 			window.addEventListener('resize', onResize);
@@ -254,6 +290,7 @@ export function useThreeScene() {
 		containerElement?.removeEventListener('mousedown', onMouseDown);
 		window.removeEventListener('mousemove', onMouseMove);
 		window.removeEventListener('mouseup', onMouseUp);
+		cube.dispose();
 		renderer.value.dispose();
 	};
 

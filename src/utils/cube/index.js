@@ -5,5 +5,5 @@
 
 export { ViewCube } from './ViewCube.js';
 export { ViewCubeMesh } from './ViewCubeMesh.js';
-export { FACES, getFaceConfigs, getFaceName } from './faces.js';
+export { FACES, getFaceConfigs, getFaceName, getModelRotations } from './faces.js';
 export * from './utils.js';
