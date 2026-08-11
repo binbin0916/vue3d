@@ -28,6 +28,8 @@ export interface ToolContext {
 	setMoveMode: (_enabled: boolean) => void;
 	/** 设置移动速度 */
 	setMoveSpeed: (_speed: number) => void;
+	/** 旋转相机到指定视角 */
+	rotateToView: (_targetPosition: THREE.Vector3, _targetUp: THREE.Vector3, _duration?: number) => void;
 }
 
 /**

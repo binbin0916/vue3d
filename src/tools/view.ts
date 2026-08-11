@@ -1,7 +1,9 @@
+import * as THREE from 'three';
 import type { ToolContext, ToolHandler } from './types';
+import { FACES, getFaceConfigs } from '@/utils/cube';
 
 /**
- * setViewAngle - 设置相机视角（待实现）
+ * setViewAngle - 设置相机视角
  *
  * @description 将相机移动到指定的标准视角位置（前/后/左/右/上/下）
  *
@@ -9,9 +11,17 @@ import type { ToolContext, ToolHandler } from './types';
  * @param {'front' | 'back' | 'left' | 'right' | 'top' | 'bottom'} payload - 目标视角方向
  */
 const setViewAngle: ToolHandler = (ctx: ToolContext, payload?: string) => {
-	void ctx;
-	void payload;
-	// TODO: 根据 payload 设置相机位置
+	if (!payload) return;
+
+	const faceConfigs = getFaceConfigs('Y-up');
+	const faceId = (FACES as any)[payload.toLocaleUpperCase()] as number;
+	const config = faceConfigs[faceId];
+
+	if (config) {
+		const targetPos = new THREE.Vector3(config.position.x, config.position.y, config.position.z);
+		const targetUp = new THREE.Vector3(config.up.x, config.up.y, config.up.z);
+		ctx.rotateToView(targetPos, targetUp);
+	}
 };
 
 /** 正视图 */

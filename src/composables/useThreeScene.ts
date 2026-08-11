@@ -266,37 +266,9 @@ export function useThreeScene() {
 			});
 
 			cube.on('faceClick', (faceId, config) => {
-				console.log('Navigate to:', faceId, config);
-				// Get initial camera distance (保持初始距离不变)
-				const initialDistance = camera.value.position.length();
-
-				// Calculate target position with same distance
-				const targetDirection = new THREE.Vector3(config.position.x, config.position.y, config.position.z).normalize();
-				const targetPos = targetDirection.multiplyScalar(initialDistance);
-
-				const startPos = camera.value.position.clone();
-				const startUp = camera.value.up.clone();
+				const targetPos = new THREE.Vector3(config.position.x, config.position.y, config.position.z);
 				const targetUp = new THREE.Vector3(config.up.x, config.up.y, config.up.z);
-
-				const duration = 500;
-				const startTime = performance.now();
-
-				function animateCamera() {
-					const elapsed = performance.now() - startTime;
-					const progress = Math.min(elapsed / duration, 1);
-					const eased = progress;
-
-					camera.value.position.lerpVectors(startPos, targetPos, eased);
-					camera.value.up.lerpVectors(startUp, targetUp, eased).normalize();
-					camera.value.lookAt(0, 0, 0);
-					controls.value.update();
-
-					if (progress < 1) {
-						requestAnimationFrame(animateCamera);
-					}
-				}
-
-				animateCamera();
+				rotateToView(targetPos, targetUp);
 			});
 
 			animate();
@@ -328,6 +300,52 @@ export function useThreeScene() {
 		renderer.value.dispose();
 	};
 
+	/**
+	 * rotateToView - 旋转相机到指定视角（公共方法）
+	 *
+	 * @description 在球面空间插值，保持相机到原点的距离恒定
+	 *
+	 * @param {THREE.Vector3} targetPosition - 目标位置方向
+	 * @param {THREE.Vector3} targetUp - 目标上方向
+	 * @param {number} duration - 动画时长（毫秒）
+	 */
+	const rotateToView = (targetPosition: THREE.Vector3, targetUp: THREE.Vector3, duration = 500) => {
+		if (!camera.value) return;
+
+		// 保持初始距离不变
+		const initialDistance = camera.value.position.length();
+
+		// 计算目标方向（归一化）
+		const targetDirection = targetPosition.clone().normalize();
+
+		// 计算起始方向（归一化）
+		const startDirection = camera.value.position.clone().normalize();
+
+		const startUp = camera.value.up.clone();
+
+		const startTime = performance.now();
+
+		function animateCamera() {
+			const elapsed = performance.now() - startTime;
+			const progress = Math.min(elapsed / duration, 1);
+			const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+
+			// 在球面空间插值方向，保持距离恒定
+			const currentDirection = new THREE.Vector3().lerpVectors(startDirection, targetDirection, eased).normalize();
+			camera.value!.position.copy(currentDirection.multiplyScalar(initialDistance));
+
+			camera.value!.up.lerpVectors(startUp, targetUp, eased).normalize();
+			camera.value!.lookAt(0, 0, 0);
+			controls.value.update();
+
+			if (progress < 1) {
+				requestAnimationFrame(animateCamera);
+			}
+		}
+
+		animateCamera();
+	};
+
 	return {
 		init,
 		dispose,
@@ -343,5 +361,6 @@ export function useThreeScene() {
 		moveSpeed,
 		setMoveMode,
 		setMoveSpeed,
+		rotateToView,
 	};
 }

@@ -27,6 +27,7 @@ const {
 	moveSpeed,
 	setMoveMode,
 	setMoveSpeed,
+	rotateToView,
 } = useThreeScene();
 
 const toolContext: ToolContext = {
@@ -56,6 +57,7 @@ const toolContext: ToolContext = {
 	},
 	setMoveMode,
 	setMoveSpeed,
+	rotateToView,
 };
 
 // ---- 颜色弹窗状态 ----
