@@ -76,12 +76,12 @@ const tools: ToolItem[] = [
 		icon: 'view',
 		label: '视角',
 		children: [
-			{ id: 'view-front', icon: 'view', label: '正视图', activatable: true },
-			{ id: 'view-back', icon: 'view', label: '后视图', activatable: true },
-			{ id: 'view-left', icon: 'view', label: '左视图', activatable: true },
-			{ id: 'view-right', icon: 'view', label: '右视图', activatable: true },
-			{ id: 'view-top', icon: 'view', label: '俯视图', activatable: true },
-			{ id: 'view-bottom', icon: 'view', label: '仰视图', activatable: true },
+			{ id: 'view-front', icon: 'view', label: '正视图', group: 'view' },
+			{ id: 'view-back', icon: 'view', label: '后视图', group: 'view' },
+			{ id: 'view-left', icon: 'view', label: '左视图', group: 'view' },
+			{ id: 'view-right', icon: 'view', label: '右视图', group: 'view' },
+			{ id: 'view-top', icon: 'view', label: '俯视图', group: 'view' },
+			{ id: 'view-bottom', icon: 'view', label: '仰视图', group: 'view' },
 		],
 	},
 	{
