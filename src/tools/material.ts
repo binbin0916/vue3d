@@ -10,6 +10,14 @@ import type { ToolContext, ToolHandler } from './types';
 const originalMaterialsStore = new WeakMap<THREE.Object3D, Map<string, THREE.Material | THREE.Material[]>>();
 
 /**
+ * wireframeEdgesStore - 按 modelGroup 实例存储线框边缘组
+ *
+ * @description 使用 WeakMap 以 modelGroup 为 key，确保每次加载新模型时
+ * 旧的线框边缘组会被自动垃圾回收，不会出现跨模型残留
+ */
+const wireframeEdgesStore = new WeakMap<THREE.Object3D, THREE.Group>();
+
+/**
  * getMaterialMap - 获取当前 modelGroup 的材质映射表
  *
  * @param {ToolContext} ctx - 工具执行上下文
@@ -92,14 +100,34 @@ function applyMaterial(ctx: ToolContext, makeMaterial: (_color: string) => THREE
 /**
  * materialWireframe - 线框模式
  *
- * @description 将模型所有 Mesh 切换为线框渲染模式，支持自定义线框颜色
+ * @description 将模型所有 Mesh 切换为线框渲染模式
+ * 使用模型本身的原始颜色
  *
  * @param {ToolContext} ctx - 工具执行上下文
- * @param {string} [payload='#ffffff'] - 线框颜色（十六进制字符串）
  */
-export const materialWireframe: ToolHandler = (ctx: ToolContext, payload?: string) => {
-	const color = payload ?? '#ffffff';
-	applyMaterial(ctx, (c) => new THREE.MeshBasicMaterial({ color: new THREE.Color(c), wireframe: true }), color);
+export const materialWireframe: ToolHandler = (ctx: ToolContext) => {
+	// 清除已存在的 EdgesGeometry 线框（如果有）
+	const existingEdges = wireframeEdgesStore.get(ctx.modelGroup);
+	if (existingEdges) {
+		ctx.scene.remove(existingEdges);
+		wireframeEdgesStore.delete(ctx.modelGroup);
+	}
+
+	// 恢复模型可见性
+	forEachMesh(ctx, (mesh) => {
+		mesh.visible = true;
+	});
+
+	// 保存原始材质并应用线框
+	saveOriginalMaterials(ctx);
+	forEachMesh(ctx, (mesh) => {
+		const mat = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+		const originalColor = mat && 'color' in mat && mat.color instanceof THREE.Color ? mat.color : new THREE.Color(0xcccccc);
+		mesh.material = new THREE.MeshBasicMaterial({
+			color: originalColor,
+			wireframe: true,
+		});
+	});
 };
 
 /**
@@ -155,10 +183,21 @@ export const materialSolid: ToolHandler = (ctx: ToolContext, payload?: string) =
 /**
  * restoreMaterial - 恢复原始材质（由 ToolBar 切换模式时调用）
  *
- * @description 恢复所有 Mesh 到加载模型时保存的原始材质
+ * @description 恢复所有 Mesh 到加载模型时保存的原始材质，重新显示被
+ * 线框模式隐藏的 Mesh，并清除场景中的线框边缘组
  *
  * @param {ToolContext} ctx - 工具执行上下文
  */
 export const restoreMaterial: ToolHandler = (ctx: ToolContext) => {
 	restoreOriginalMaterials(ctx);
+
+	// 清除线框边缘组并重新显示模型
+	const existingEdges = wireframeEdgesStore.get(ctx.modelGroup);
+	if (existingEdges) {
+		ctx.scene.remove(existingEdges);
+		wireframeEdgesStore.delete(ctx.modelGroup);
+	}
+	forEachMesh(ctx, (mesh) => {
+		mesh.visible = true;
+	});
 };

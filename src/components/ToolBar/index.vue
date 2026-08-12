@@ -140,7 +140,7 @@ const tools: ToolItem[] = [
 		icon: 'material',
 		label: '材质',
 		children: [
-			{ id: 'material-wireframe', icon: 'material', label: '线框模式', activatable: true, color: true, defaultColor: '#ffffff', group: 'material' },
+			{ id: 'material-wireframe', icon: 'material', label: '线框模式', activatable: true, group: 'material' },
 			{ id: 'material-xray', icon: 'material', label: 'X光模式', activatable: true, group: 'material' },
 			{ id: 'material-normal', icon: 'material', label: '法线显示', activatable: true, group: 'material' },
 			{ id: 'material-solid', icon: 'material', label: '纯色显示', activatable: true, color: true, defaultColor: '#999999', group: 'material' },

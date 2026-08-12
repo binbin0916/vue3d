@@ -74,7 +74,7 @@ watch(
 		let foundColorTool = false;
 		for (const id of toolStore.activeTools) {
 			// 通过 toolRegistry 检查是否是材质工具（带颜色）
-			if (id.startsWith('material-wireframe') || id.startsWith('material-solid')) {
+			if (id.startsWith('material-solid')) {
 				foundColorTool = true;
 				activeColorToolId.value = id;
 				break;
