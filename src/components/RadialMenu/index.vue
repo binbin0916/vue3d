@@ -50,9 +50,13 @@ const menuItems: MenuItem[] = [
 		icon: 'camera',
 		label: '相机',
 		children: [
-			{ id: 'camera-reset', icon: 'reset', label: '重置视角' },
-			{ id: 'view-front', icon: 'view', label: '正视图', activatable: true },
-			{ id: 'camera-perspective', icon: 'view', label: '透视图', activatable: true },
+			{ id: 'return-origin', icon: 'reset', label: '重置视角' },
+			{ id: 'view-front', icon: 'view-front', label: '正视图' },
+			{ id: 'view-back', icon: 'view-back', label: '后视图' },
+			{ id: 'view-left', icon: 'view-left', label: '左视图' },
+			{ id: 'view-right', icon: 'view-right', label: '右视图' },
+			{ id: 'view-top', icon: 'view-top', label: '俯视图' },
+			{ id: 'view-bottom', icon: 'view-bottom', label: '仰视图' },
 		],
 	},
 	{
