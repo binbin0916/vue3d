@@ -23,7 +23,6 @@ const {
 	modelGroup,
 	controls,
 	modelSize,
-	isMoveMode,
 	moveSpeed,
 	setMoveMode,
 	setMoveSpeed,
@@ -48,9 +47,6 @@ const toolContext: ToolContext = {
 	},
 	get modelSize() {
 		return modelSize.value;
-	},
-	get isMoveMode() {
-		return isMoveMode.value;
 	},
 	get moveSpeed() {
 		return moveSpeed.value;
@@ -148,7 +144,7 @@ onUnmounted(() => {
 		<div id="v"></div>
 		<ModelLoader :loading="loading" :loaded="loadProgress.loaded" :total="loadProgress.total" :percent="loadProgress.percent" />
 		<RadialMenu @select="handleRadialSelect" @activate="handleRadialActivate" />
-		<ToolBar :is-move-mode="isMoveMode" @tool-action="handleToolAction" />
+		<ToolBar @tool-action="handleToolAction" />
 
 		<!-- 颜色选择弹窗 -->
 		<DraggableDialog v-model="showColorDialog" title="颜色选择" width="320px" top="120px">

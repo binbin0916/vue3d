@@ -1,5 +1,5 @@
 import type { ToolHandler } from './types';
-import { toggleMove, setMoveSpeed } from './move';
+import { setMoveSpeed } from './move';
 import { viewFront, viewBack, viewLeft, viewRight, viewTop, viewBottom, viewOrigin } from './view';
 import { measureDistance, measureAngle, measureArea } from './measure';
 import { annotateText, annotatePin } from './annotate';
@@ -17,7 +17,6 @@ export const toolRegistry: Record<string, ToolHandler> = {
 	// 返回原点
 	'return-origin': viewOrigin,
 	// 移动
-	'move:toggle': toggleMove,
 	'move:setSpeed': setMoveSpeed,
 
 	// 视角
