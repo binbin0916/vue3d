@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
 import SvgIcon from '@/components/SvgIcon/index.vue';
 import { findItemById } from '@/utils/tree';
 import { useToolStore } from '@/stores/tool';
@@ -10,7 +10,7 @@ import { useToolStore } from '@/stores/tool';
  * @description 支持多级嵌套的树形菜单，叶子节点可触发工具动作
  */
 interface ToolItem {
-	/** 唯一标识符（如 'move', 'section-plane-x'） */
+	/** 唯一标识符（如 'section-plane-x'） */
 	id: string;
 	/** 图标名称，对应 src/assets/svgs/ 下的文件名 */
 	icon: string;
@@ -29,40 +29,17 @@ interface ToolItem {
 }
 
 /**
- * Props - ToolBar 组件属性
- */
-interface Props {
-	/** 是否处于移动模式，影响移动按钮的激活高亮状态 */
-	isMoveMode?: boolean;
-}
-
-const props = withDefaults(defineProps<Props>(), {
-	isMoveMode: false,
-});
-
-/**
  * Emits - ToolBar 组件事件
  *
  * @fires tool-action - 工具菜单项被点击时触发
  */
 const emit = defineEmits<{
-	/** 工具动作事件，action 为动作标识（如 'move:toggle', 'section:plane-x'），payload 为可选参数 */
+	/** 工具动作事件，action 为动作标识（如 'section:plane-x'），payload 为可选参数 */
 	'tool-action': [action: string, payload?: any];
 }>();
 
 const activeStack = ref<string[]>([]);
 const toolStore = useToolStore();
-
-watch(
-	() => props.isMoveMode,
-	(val) => {
-		if (val) {
-			toolStore.activate('move');
-		} else {
-			toolStore.deactivate('move');
-		}
-	}
-);
 
 const tools: ToolItem[] = [
 	{
@@ -71,9 +48,15 @@ const tools: ToolItem[] = [
 		label: '返回原点',
 	},
 	{
-		id: 'move',
-		icon: 'move',
-		label: '移动',
+		id: 'rotate',
+		icon: 'rotate',
+		label: '旋转',
+		activatable: true,
+	},
+	{
+		id: 'axis',
+		icon: 'axis',
+		label: '坐标系',
 		activatable: true,
 	},
 	{
@@ -298,8 +281,6 @@ const handleSelect = (item: ToolItem) => {
 		direction.value = 'forward';
 		activeStack.value.push(item.id);
 		currentItems.value = item.children;
-	} else if (item.id === 'move') {
-		emit('tool-action', 'move:toggle');
 	} else if (item.activatable) {
 		const actionId = getActionId(item.id);
 

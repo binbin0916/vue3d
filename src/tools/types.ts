@@ -20,8 +20,6 @@ export interface ToolContext {
 	controls: TrackballControls;
 	/** 模型包围盒最大边长 */
 	modelSize: number;
-	/** 是否处于移动模式 */
-	isMoveMode: boolean;
 	/** 移动速度倍率 */
 	moveSpeed: number;
 	/** 切换移动模式 */
