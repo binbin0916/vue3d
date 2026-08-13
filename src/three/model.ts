@@ -105,7 +105,7 @@ export function loadModel(url: string, onProgress?: (_progress: LoadProgress) =>
 				// scene.scale.setScalar(scaleFactor);
 
 				const group = new THREE.Object3D();
-				// group.rotation.set(Math.PI / 4, -Math.PI / 4, 0);
+				group.rotation.set(Math.PI / 4, -Math.PI / 4, 0);
 				group.add(scene);
 
 				resolve({ scene, meshes, group, modelSize });
