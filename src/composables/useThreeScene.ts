@@ -3,10 +3,6 @@ import { shallowRef, ref } from 'vue';
 import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
 import { createRenderer, createScene, createCamera, addLights, loadModel, createControls } from '@/three';
 import type { LoadProgress } from '@/three';
-// import { useViewCube } from './useViewCube';
-
-import { ViewCube } from '@/utils/cube';
-import type { ViewCube as TypeViewCube } from '@/utils/cube';
 
 const MODEL_PATH = '/model/get/';
 
@@ -46,8 +42,6 @@ export function useThreeScene() {
 	const loadProgress = ref<LoadProgress>({ loaded: 0, total: 0, percent: 0 });
 	const modelSize = ref(0);
 
-	let cube: TypeViewCube;
-
 	// 移动模式状态
 	const isMoveMode = ref(false);
 	const moveSpeed = ref(1);
@@ -76,11 +70,6 @@ export function useThreeScene() {
 	const animate = () => {
 		rafId = requestAnimationFrame(animate);
 		render();
-
-		if (cube && modelGroup.value) {
-			cube.setRotation(modelGroup.value.rotation);
-			cube.update(camera.value);
-		}
 
 		if (!isMoveMode.value && controls.value.enabled) {
 			controls.value.update();
@@ -239,76 +228,6 @@ export function useThreeScene() {
 			camera.value = createCamera(result.modelSize, modelGroup.value.position);
 			addLights(scene.value, result.modelSize);
 			controls.value = createControls(camera.value, renderer.value.domElement, result.modelSize);
-			// Initialize ViewCube
-			cube = new ViewCube({
-				container: container,
-				coordinateSystem: 'Y-up',
-				size: 120,
-				position: 'top-right',
-				cameraDistance: 10,
-				modelRotation: modelGroup.value.rotation,
-				colors: {
-					main: 0xe0e0e0,
-					hover: 0x87ceeb,
-					outline: 0x555555,
-				},
-				labels: {
-					top: '上',
-					bottom: '下',
-					front: '前',
-					back: '后',
-					left: '左',
-					right: '右',
-				},
-				font: {
-					size: 60,
-				},
-			});
-
-			cube.on('faceClick', (faceId, config) => {
-				const targetPos = new THREE.Vector3(config.position.x, config.position.y, config.position.z);
-				const targetUp = new THREE.Vector3(config.up.x, config.up.y, config.up.z);
-				rotateToView(targetPos, targetUp);
-			});
-
-			cube.on('drag', (deltaX, deltaY) => {
-				const rotationSpeed = 0.005;
-				const target = new THREE.Vector3(0, 0, 0);
-
-				// Get the offset from target
-				const offset = camera.value.position.clone().sub(target);
-				const distance = offset.length();
-
-				// Get view direction (from camera to target)
-				const viewDir = offset.clone().normalize().negate();
-
-				// Calculate right vector from cross product of view direction and world up
-				// This works correctly at all angles including poles
-				const worldUp = new THREE.Vector3(0, 1, 0);
-				const right = new THREE.Vector3().crossVectors(viewDir, worldUp);
-
-				// Handle pole case: when looking straight up or down, right vector is zero
-				if (right.lengthSq() < 0.001) {
-					// Use camera's last known right direction or fallback
-					right.set(1, 0, 0);
-				} else {
-					right.normalize();
-				}
-
-				// Rotate around world Y-axis for horizontal movement
-				const rotY = new THREE.Quaternion().setFromAxisAngle(worldUp, -deltaX * rotationSpeed);
-				offset.applyQuaternion(rotY);
-
-				// Rotate around the right axis for vertical movement
-				const rotX = new THREE.Quaternion().setFromAxisAngle(right, -deltaY * rotationSpeed);
-				offset.applyQuaternion(rotX);
-
-				// Apply new position, maintaining distance
-				offset.normalize().multiplyScalar(distance);
-				camera.value.position.copy(target).add(offset);
-				camera.value.lookAt(target);
-				controls.value.update();
-			});
 
 			animate();
 			window.addEventListener('resize', onResize);
@@ -335,7 +254,6 @@ export function useThreeScene() {
 		containerElement?.removeEventListener('mousedown', onMouseDown);
 		window.removeEventListener('mousemove', onMouseMove);
 		window.removeEventListener('mouseup', onMouseUp);
-		cube.dispose();
 		renderer.value.dispose();
 	};
 
