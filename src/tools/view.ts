@@ -1,6 +1,6 @@
-import * as THREE from 'three';
+// import * as THREE from 'three';
 import type { ToolContext, ToolHandler } from './types';
-import { FACES, getFaceConfigs } from '@/utils/cube';
+// import { FACES, getFaceConfigs } from '@/utils/cube';
 
 /**
  * setViewAngle - 设置相机视角
@@ -13,15 +13,15 @@ import { FACES, getFaceConfigs } from '@/utils/cube';
 const setViewAngle: ToolHandler = (ctx: ToolContext, payload?: string) => {
 	if (!payload) return;
 
-	const faceConfigs = getFaceConfigs('Y-up');
-	const faceId = (FACES as any)[payload.toLocaleUpperCase()] as number;
-	const config = faceConfigs[faceId];
+	// const faceConfigs = getFaceConfigs('Y-up');
+	// const faceId = (FACES as any)[payload.toLocaleUpperCase()] as number;
+	// const config = faceConfigs[faceId];
 
-	if (config) {
-		const targetPos = new THREE.Vector3(config.position.x, config.position.y, config.position.z);
-		const targetUp = new THREE.Vector3(config.up.x, config.up.y, config.up.z);
-		ctx.rotateToView(targetPos, targetUp);
-	}
+	// if (config) {
+	// 	const targetPos = new THREE.Vector3(config.position.x, config.position.y, config.position.z);
+	// 	const targetUp = new THREE.Vector3(config.up.x, config.up.y, config.up.z);
+	// 	ctx.rotateToView(targetPos, targetUp);
+	// }
 };
 
 /** 正视图 */
