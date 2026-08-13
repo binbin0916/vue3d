@@ -3,6 +3,7 @@ import { shallowRef, ref } from 'vue';
 import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
 import { createRenderer, createScene, createCamera, addLights, loadModel, createControls } from '@/three';
 import type { LoadProgress } from '@/three';
+import { useViewCube } from '@/composables/useViewCube';
 
 const MODEL_PATH = '/model/get/';
 
@@ -38,6 +39,11 @@ export function useThreeScene() {
 	const modelGroup = shallowRef<THREE.Object3D>({} as THREE.Object3D);
 	const controls = shallowRef<TrackballControls>({} as TrackballControls);
 
+	const cubeGroup = shallowRef<THREE.Object3D>({} as THREE.Object3D);
+	const cubeSence = shallowRef<THREE.Scene>({} as THREE.Scene);
+	const cubeCamera = shallowRef<THREE.OrthographicCamera>({} as THREE.OrthographicCamera);
+	const cubeControls = shallowRef<TrackballControls>({} as TrackballControls);
+
 	const loading = ref(true);
 	const loadProgress = ref<LoadProgress>({ loaded: 0, total: 0, percent: 0 });
 	const modelSize = ref(0);
@@ -59,6 +65,9 @@ export function useThreeScene() {
 		renderer.value.clear();
 		renderer.value.setViewport(0, 0, window.innerWidth, window.innerHeight);
 		renderer.value.render(scene.value, camera.value);
+
+		renderer.value.setViewport(window.innerWidth / 2 - 120, window.innerHeight / 2 - 120, window.innerWidth, window.innerHeight);
+		renderer.value.render(cubeSence.value, cubeCamera.value);
 	};
 
 	/**
@@ -71,9 +80,10 @@ export function useThreeScene() {
 		rafId = requestAnimationFrame(animate);
 		render();
 
-		if (!isMoveMode.value && controls.value.enabled) {
-			controls.value.update();
-		}
+		cubeGroup.value.rotation.copy(modelGroup.value.rotation);
+
+		controls.value.update();
+		cubeControls.value.update();
 	};
 
 	/**
@@ -84,6 +94,15 @@ export function useThreeScene() {
 	const onResize = () => {
 		camera.value.aspect = window.innerWidth / window.innerHeight;
 		camera.value.updateProjectionMatrix();
+
+		cubeGroup.value.rotation.copy(modelGroup.value.rotation);
+
+		cubeCamera.value.left = -window.innerWidth / 120;
+		cubeCamera.value.right = window.innerWidth / 120;
+		cubeCamera.value.top = window.innerHeight / 120;
+		cubeCamera.value.bottom = -window.innerHeight / 120;
+		cubeCamera.value.updateProjectionMatrix();
+
 		render();
 		renderer.value.setSize(window.innerWidth, window.innerHeight);
 	};
@@ -228,6 +247,13 @@ export function useThreeScene() {
 			camera.value = createCamera(result.modelSize, modelGroup.value.position);
 			addLights(scene.value, result.modelSize);
 			controls.value = createControls(camera.value, renderer.value.domElement, result.modelSize);
+
+			// cube
+			const cubeResult = useViewCube(renderer.value);
+			cubeGroup.value = cubeResult.cubeGroup;
+			cubeSence.value = cubeResult.cubeSence;
+			cubeCamera.value = cubeResult.cubeCamera;
+			cubeControls.value = cubeResult.cubeControls;
 
 			animate();
 			window.addEventListener('resize', onResize);
