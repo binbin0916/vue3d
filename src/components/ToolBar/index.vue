@@ -54,8 +54,8 @@ const tools: ToolItem[] = [
 		activatable: true,
 	},
 	{
-		id: 'axis',
-		icon: 'axis',
+		id: 'axes',
+		icon: 'axes',
 		label: '坐标系',
 		activatable: true,
 	},

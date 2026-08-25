@@ -24,6 +24,8 @@ export interface ModelResult {
 	group: THREE.Object3D;
 	/** 模型包围盒最大边长，用于灯光、相机、控制器的尺寸基准 */
 	modelSize: number;
+	/** 模型局部坐标系 */
+	axes: THREE.AxesHelper;
 }
 
 /**
@@ -104,11 +106,29 @@ export function loadModel(url: string, onProgress?: (_progress: LoadProgress) =>
 				// const scaleFactor = TARGET_SIZE / modelSize;
 				// scene.scale.setScalar(scaleFactor);
 
+				// 坐标轴长度：取模型尺寸的 20%，可按需要调整
+				const axes = new THREE.AxesHelper(modelSize * 0.8);
+				axes.name = 'modelLocalAxes';
+				axes.position.set(0, 0, 0); // scene 已居中，原点即模型中心
+				axes.renderOrder = 999;
+				axes.traverse((object) => {
+					if (object instanceof THREE.Line) {
+						const material = object.material as THREE.LineBasicMaterial;
+						material.depthTest = false;
+						material.depthWrite = false;
+						material.transparent = true;
+						material.opacity = 1;
+					}
+				});
+
+				(axes.material as any).opacity = 0;
+
 				const group = new THREE.Object3D();
 				group.rotation.set(Math.PI / 4, -Math.PI / 4, 0);
-				group.add(scene);
 
-				resolve({ scene, meshes, group, modelSize });
+				group.add(axes, scene);
+
+				resolve({ scene, meshes, group, modelSize, axes });
 			},
 			(xhr) => {
 				if (xhr.lengthComputable && onProgress) {
