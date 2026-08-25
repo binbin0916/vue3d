@@ -1,48 +1,42 @@
+import { ref, shallowRef } from 'vue';
 import * as THREE from 'three';
-import { shallowRef, ref } from 'vue';
-import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
-import { createRenderer, createScene, createCamera, addLights, loadModel, createControls } from '@/three';
+import type { TrackballControls } from 'three/addons/controls/TrackballControls.js';
+import type { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
+import { createRenderer, createScene, createCamera, addLights, loadModel, createControls, createCSS2DRenderer } from '@/three';
 import type { LoadProgress } from '@/three';
-import { useViewCube } from '@/composables/useViewCube';
+import { useViewCube } from './useViewCube';
 
 const MODEL_PATH = '/model/get/';
 
 /**
- * useThreeScene - 3D 场景管理 Composable
+ * useThreeScene - 3D 场景核心 Composable
  *
- * @description 封装 Three.js 渲染器、场景、相机、灯光、模型加载、控制器的完整生命周期。
- * 返回响应式状态和操作函数，供 Vue 组件消费。内部管理：
- * - 渲染循环（requestAnimationFrame）
- * - 窗口缩放自适应
- * - 移动模式（鼠标拖拽平移模型）
+ * @description 封装 Three.js 场景的完整生命周期管理，包括：
+ * - 渲染器、场景、相机、控制器的创建和配置
+ * - GLB 模型的异步加载（带进度回调）
+ * - 渲染循环和窗口响应
+ * - 移动模式（拖拽平移）
+ * - 视角旋转动画
  *
  * @returns {Object} 包含以下属性和方法：
- * - `init(container, code)` - 初始化 3D 场景并加载模型
- * - `dispose()` - 销毁场景，释放资源和事件监听
- * - `loading` - 是否正在加载（Ref<boolean>）
- * - `loadProgress` - 加载进度（Ref<LoadProgress>）
- * - `renderer` - Three.js 渲染器（ShallowRef<WebGLRenderer>）
- * - `scene` - Three.js 场景（ShallowRef<Scene>）
- * - `camera` - Three.js 相机（ShallowRef<PerspectiveCamera>）
- * - `modelGroup` - 模型根组（ShallowRef<Object3D>）
- * - `controls` - 轨道控制器（ShallowRef<TrackballControls>）
- * - `modelSize` - 模型包围盒尺寸（Ref<number>）
- * - `isMoveMode` - 是否处于移动模式（Ref<boolean>）
- * - `moveSpeed` - 移动速度倍率（Ref<number>）
+ * - `init(container, code)` - 初始化场景
+ * - `dispose()` - 销毁场景，释放资源
+ * - `loading` - 加载状态
+ * - `loadProgress` - 加载进度
+ * - `renderer` / `scene` / `camera` / `modelGroup` / `controls` - 场景核心对象
+ * - `modelSize` - 模型包围盒最大边长
+ * - `isMoveMode` / `moveSpeed` - 移动模式状态
  * - `setMoveMode(enabled)` - 切换移动模式
  * - `setMoveSpeed(speed)` - 设置移动速度
+ * - `rotateToView(targetPosition, targetUp, duration)` - 旋转相机到指定视角
  */
 export function useThreeScene() {
 	const renderer = shallowRef<THREE.WebGLRenderer>({} as THREE.WebGLRenderer);
+	const css2dRenderer = shallowRef<CSS2DRenderer>({} as CSS2DRenderer);
 	const scene = shallowRef<THREE.Scene>({} as THREE.Scene);
 	const camera = shallowRef<THREE.PerspectiveCamera>({} as THREE.PerspectiveCamera);
 	const modelGroup = shallowRef<THREE.Object3D>({} as THREE.Object3D);
 	const controls = shallowRef<TrackballControls>({} as TrackballControls);
-
-	const cubeGroup = shallowRef<THREE.Object3D>({} as THREE.Object3D);
-	const cubeSence = shallowRef<THREE.Scene>({} as THREE.Scene);
-	const cubeCamera = shallowRef<THREE.OrthographicCamera>({} as THREE.OrthographicCamera);
-	const cubeControls = shallowRef<TrackballControls>({} as TrackballControls);
 
 	const loading = ref(true);
 	const loadProgress = ref<LoadProgress>({ loaded: 0, total: 0, percent: 0 });
@@ -56,6 +50,9 @@ export function useThreeScene() {
 	let containerElement: HTMLElement | null = null;
 	let rafId = 0;
 
+	// ---- ViewCube（独立渲染器 + DOM） ----
+	let cubeResult: ReturnType<typeof useViewCube> | null = null;
+
 	/**
 	 * render - 执行单帧渲染
 	 *
@@ -66,8 +63,12 @@ export function useThreeScene() {
 		renderer.value.setViewport(0, 0, window.innerWidth, window.innerHeight);
 		renderer.value.render(scene.value, camera.value);
 
-		renderer.value.setViewport(window.innerWidth / 2 - 120, window.innerHeight / 2 - 120, window.innerWidth, window.innerHeight);
-		renderer.value.render(cubeSence.value, cubeCamera.value);
+		css2dRenderer.value.render(scene.value, camera.value);
+
+		// ViewCube 独立渲染
+		if (cubeResult) {
+			cubeResult.cubeRenderer.render(cubeResult.cubeScene, cubeResult.cubeCamera);
+		}
 	};
 
 	/**
@@ -80,10 +81,12 @@ export function useThreeScene() {
 		rafId = requestAnimationFrame(animate);
 		render();
 
-		cubeGroup.value.rotation.copy(modelGroup.value.rotation);
+		// 同步 ViewCube 旋转（相机四元数的逆）
+		if (cubeResult) {
+			cubeResult.cubeGroup.quaternion.copy(camera.value.quaternion).invert();
+		}
 
 		controls.value.update();
-		cubeControls.value.update();
 	};
 
 	/**
@@ -95,16 +98,9 @@ export function useThreeScene() {
 		camera.value.aspect = window.innerWidth / window.innerHeight;
 		camera.value.updateProjectionMatrix();
 
-		cubeGroup.value.rotation.copy(modelGroup.value.rotation);
-
-		cubeCamera.value.left = -window.innerWidth / 120;
-		cubeCamera.value.right = window.innerWidth / 120;
-		cubeCamera.value.top = window.innerHeight / 120;
-		cubeCamera.value.bottom = -window.innerHeight / 120;
-		cubeCamera.value.updateProjectionMatrix();
-
 		render();
 		renderer.value.setSize(window.innerWidth, window.innerHeight);
+		css2dRenderer.value.setSize(window.innerWidth, window.innerHeight);
 	};
 
 	/**
@@ -218,7 +214,7 @@ export function useThreeScene() {
 	 * 2. 异步加载 GLB 模型（带进度回调）
 	 * 3. 创建相机和控制器
 	 * 4. 启动渲染循环
-	 * 5. 等待最少 1.5s 展示加载动画后隐藏 loading
+	 * 5. 等待最少 1s 展示加载动画后隐藏 loading
 	 *
 	 * @param {HTMLElement} container - 渲染器 canvas 要挂载的 DOM 容器
 	 * @param {string} code - 业务编码（暂未使用，保留扩展）
@@ -232,6 +228,7 @@ export function useThreeScene() {
 
 		try {
 			renderer.value = createRenderer(container);
+			css2dRenderer.value = createCSS2DRenderer(container);
 			scene.value = createScene();
 
 			const startTime = performance.now();
@@ -248,12 +245,8 @@ export function useThreeScene() {
 			addLights(scene.value, result.modelSize);
 			controls.value = createControls(camera.value, renderer.value.domElement, result.modelSize);
 
-			// cube
-			const cubeResult = useViewCube(renderer.value);
-			cubeGroup.value = cubeResult.cubeGroup;
-			cubeSence.value = cubeResult.cubeSence;
-			cubeCamera.value = cubeResult.cubeCamera;
-			cubeControls.value = cubeResult.cubeControls;
+			// ViewCube（独立渲染器 + DOM 容器）
+			cubeResult = useViewCube(container);
 
 			animate();
 			window.addEventListener('resize', onResize);
@@ -281,6 +274,7 @@ export function useThreeScene() {
 		window.removeEventListener('mousemove', onMouseMove);
 		window.removeEventListener('mouseup', onMouseUp);
 		renderer.value.dispose();
+		cubeResult?.dispose();
 	};
 
 	/**
