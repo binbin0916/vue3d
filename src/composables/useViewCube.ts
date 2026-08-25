@@ -3,35 +3,87 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
 import { cubeTextConfigs } from '@/utils/view';
 
-export const useViewCube = (renderer: THREE.WebGLRenderer) => {
+/** cube 渲染区域尺寸（px） */
+const CUBE_SIZE = 150;
+
+export const useViewCube = (container: HTMLElement) => {
+	// ---- 独立 DOM 容器 ----
+	const cubeContainer = document.createElement('div');
+	cubeContainer.style.cssText = `
+		position: absolute;
+		top: 10px;
+		right: 10px;
+		width: ${CUBE_SIZE}px;
+		height: ${CUBE_SIZE}px;
+		z-index: 100;
+		pointer-events: auto;
+	`;
+	container.style.position = 'relative';
+	container.appendChild(cubeContainer);
+
+	// ---- 独立渲染器 ----
+	const cubeRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+	cubeRenderer.setPixelRatio(window.devicePixelRatio * 2);
+	cubeRenderer.setSize(CUBE_SIZE, CUBE_SIZE);
+	cubeRenderer.setClearColor(0x000000, 0);
+	cubeContainer.appendChild(cubeRenderer.domElement);
+
+	// ---- 场景 & 相机 ----
+	const cubeScene = new THREE.Scene();
+	const cubeCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
+	cubeCamera.position.z = 60;
+
+	const light = new THREE.HemisphereLight(0xffffff, 0xffffff, 3);
+	light.position.copy(cubeCamera.position);
+	cubeScene.add(light);
+
+	// ---- Controls（同步主场景旋转） ----
+	const cubeControls = new TrackballControls(cubeCamera, cubeRenderer.domElement);
+	cubeControls.rotateSpeed = 1;
+	cubeControls.noZoom = true;
+	cubeControls.noPan = true;
+
+	// ---- 加载 cube GLB 模型 ----
 	const loader = new GLTFLoader();
-
+	const textureLoader = new THREE.TextureLoader();
 	const cubeGroup = new THREE.Group();
-	const cubeSence = new THREE.Scene();
-	const cubeMeshs = [] as THREE.Mesh[];
+	const cubeMeshs: THREE.Mesh[] = [];
 
-	loader.load('/cubeview.glb', (gltf) => {
+	loader.load('/cubeview_1.glb', (gltf) => {
 		const scene = gltf.scene;
-		[...scene.children].forEach(async (obj: any) => {
+		[...scene.children].forEach((obj: any) => {
 			if (obj.type === 'Mesh') {
-				obj.material = new THREE.MeshStandardMaterial({
+				const config = cubeTextConfigs[obj.name];
+
+				const material = new THREE.MeshStandardMaterial({
 					side: THREE.DoubleSide,
 					color: 0xffffff,
 					flatShading: false,
 					polygonOffset: true,
 					polygonOffsetFactor: 1,
 					polygonOffsetUnits: 1,
+					roughness: 0.6,
+					metalness: 0.1,
+					opacity: 1,
 				});
+
+				if (config && config.src) {
+					textureLoader.load(config.src, (texture) => {
+						texture.colorSpace = THREE.SRGBColorSpace;
+						texture.anisotropy = cubeRenderer.capabilities.getMaxAnisotropy();
+						texture.wrapS = THREE.ClampToEdgeWrapping;
+						texture.wrapT = THREE.ClampToEdgeWrapping;
+
+						material.map = texture;
+						material.color.setHex(0xffffff);
+						material.needsUpdate = true;
+					});
+				}
+
+				obj.material = material;
+				material.needsUpdate = true;
 				obj.castShadow = true;
 				obj.receiveShadow = true;
-
-				const config = cubeTextConfigs[obj.name];
-				if (config) {
-					try {
-					} catch (error) {
-						console.error(`error`, error);
-					}
-				}
 
 				cubeMeshs.push(obj);
 			} else if (obj.type === 'LineSegments') {
@@ -47,42 +99,29 @@ export const useViewCube = (renderer: THREE.WebGLRenderer) => {
 		});
 
 		const box = new THREE.Box3().setFromObject(cubeGroup);
+		const size = box.getSize(new THREE.Vector3());
 		const center = box.getCenter(new THREE.Vector3());
 		cubeGroup.position.sub(center);
 
-		cubeSence.add(cubeGroup);
+		// 缩放到容器 1/2 大小（正交相机 frustum 为 ±1，目标占 1 个单位）
+		const maxDim = Math.max(size.x, size.y, size.z);
+		if (maxDim > 0) {
+			cubeGroup.scale.setScalar(1 / maxDim);
+		}
+
+		cubeScene.add(cubeGroup);
 	});
 
-	const cubeCamera = new THREE.OrthographicCamera(
-		window.innerWidth / -60,
-		window.innerWidth / 60,
-		window.innerHeight / 60,
-		window.innerHeight / -60,
-		0.1,
-		100
-	);
-
-	cubeCamera.position.z = 60;
-
-	const cubeControls = new TrackballControls(cubeCamera, renderer.domElement);
-	cubeControls.rotateSpeed = 1;
-	cubeControls.noZoom = true;
-	cubeControls.noPan = true;
-
-	const light = new THREE.HemisphereLight(0xffffff, 0xffffff, 3);
-	light.position.copy(cubeCamera.position);
-	cubeSence.add(light);
-
+	// ---- Raycaster（基于独立 canvas，NDC 计算极简） ----
 	let hoveredMesh: THREE.Mesh | null = null;
 	const originalColors = new Map<THREE.Mesh, THREE.Color>();
 	const raycaster = new THREE.Raycaster();
 	const pointer = new THREE.Vector2();
 
-	const rect = renderer.domElement.getBoundingClientRect();
-	const vpX = window.innerWidth / 2 - 120;
-	const vpY = window.innerHeight / 2 - 120; // WebGL bottom-up
-	const vpW = window.innerWidth;
-	const vpH = window.innerHeight;
+	function getNDC(event: PointerEvent): THREE.Vector2 {
+		const rect = cubeRenderer.domElement.getBoundingClientRect();
+		return new THREE.Vector2(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
+	}
 
 	function saveAndApplyColor(mesh: THREE.Mesh, hex: number) {
 		if (!originalColors.has(mesh)) {
@@ -101,28 +140,10 @@ export const useViewCube = (renderer: THREE.WebGLRenderer) => {
 	}
 
 	const handleMouseMove = (event: PointerEvent) => {
-		const canvasX = event.clientX - rect.left;
-		const canvasY = event.clientY - rect.top;
-
-		// viewport bounds check (CSS coords)
-		const inViewport = canvasX >= vpX && canvasX <= vpX + vpW && canvasY >= rect.height - vpY - vpH && canvasY <= rect.height - vpY;
-
-		if (!inViewport) {
-			if (hoveredMesh) {
-				restoreColor(hoveredMesh);
-				hoveredMesh = null;
-			}
-			return;
-		}
-
-		// corrected NDC
-		pointer.x = ((canvasX - vpX) / vpW) * 2 - 1;
-		pointer.y = (2 * (rect.height - canvasY - vpY)) / vpH - 1;
-
+		pointer.copy(getNDC(event));
 		raycaster.setFromCamera(pointer, cubeCamera);
 		const intersects = raycaster.intersectObjects(cubeMeshs, true);
 
-		// no hit → restore (else branch)
 		if (intersects.length === 0) {
 			if (hoveredMesh) {
 				restoreColor(hoveredMesh);
@@ -142,10 +163,8 @@ export const useViewCube = (renderer: THREE.WebGLRenderer) => {
 			return;
 		}
 
-		// same face → no-op
 		if (mesh === hoveredMesh) return;
 
-		// different face → restore old, highlight new
 		if (hoveredMesh) {
 			restoreColor(hoveredMesh);
 		}
@@ -154,25 +173,27 @@ export const useViewCube = (renderer: THREE.WebGLRenderer) => {
 	};
 
 	const handleClick = (event: MouseEvent) => {
-		const canvasX = event.clientX - rect.left;
-		const canvasY = event.clientY - rect.top;
-		pointer.x = ((canvasX - vpX) / vpW) * 2 - 1;
-		pointer.y = (2 * (rect.height - canvasY - vpY)) / vpH - 1;
-
+		pointer.copy(getNDC(event as unknown as PointerEvent));
 		raycaster.setFromCamera(pointer, cubeCamera);
-		const intersects = raycaster.intersectObjects(cubeMeshs, true);
-		if (intersects && intersects[0]) {
-			//
-		}
+		raycaster.intersectObjects(cubeMeshs, true);
 	};
 
-	renderer.domElement.addEventListener('pointermove', handleMouseMove, false);
-	renderer.domElement.addEventListener('click', handleClick, false);
+	cubeRenderer.domElement.addEventListener('pointermove', handleMouseMove, false);
+	cubeRenderer.domElement.addEventListener('click', handleClick, false);
 
-	const dispose = () => {
-		renderer.domElement.removeEventListener('pointermove', handleMouseMove, false);
-		renderer.domElement.removeEventListener('click', handleClick, false);
+	// ---- 对外暴露 ----
+	return {
+		cubeGroup,
+		cubeScene,
+		cubeCamera,
+		cubeControls,
+		cubeRenderer,
+		cubeContainer,
+		dispose: () => {
+			cubeRenderer.domElement.removeEventListener('pointermove', handleMouseMove, false);
+			cubeRenderer.domElement.removeEventListener('click', handleClick, false);
+			cubeRenderer.dispose();
+			cubeContainer.remove();
+		},
 	};
-
-	return { cubeGroup, cubeSence, cubeCamera, cubeControls, dispose };
 };
