@@ -1,6 +1,6 @@
 import type { ToolHandler } from './types';
 import { setMoveSpeed } from './move';
-import { viewFront, viewBack, viewLeft, viewRight, viewTop, viewBottom, viewOrigin } from './view';
+import { viewFront, viewBack, viewLeft, viewRight, viewTop, viewBottom, viewOrigin, viewRotate, resetViewRotate } from './view';
 import { measureDistance, measureAngle, measureArea } from './measure';
 import { annotateText, annotatePin } from './annotate';
 import { sectionPlaneX, sectionPlaneY, sectionPlaneZ, sectionBoxInner, sectionBoxOuter, sectionCustom } from './section';
@@ -18,6 +18,8 @@ export const toolRegistry: Record<string, ToolHandler> = {
 	'return-origin': viewOrigin,
 	// 移动
 	'move:setSpeed': setMoveSpeed,
+	rotate: viewRotate,
+	'rotate:restore': resetViewRotate,
 
 	// 视角
 	'view-front': viewFront,

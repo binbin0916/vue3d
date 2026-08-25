@@ -28,6 +28,13 @@ export interface ToolContext {
 	setMoveSpeed: (_speed: number) => void;
 	/** 旋转相机到指定视角 */
 	rotateToView: (_targetPosition: THREE.Vector3, _targetUp: THREE.Vector3, _duration?: number) => void;
+	/** 是否开启自转 */
+	autoRotate: boolean;
+	/** 切换旋转状态 */
+	toggleAutoRotate: () => void;
+	/** 设置旋转状态 */
+	setAutoRotate: (_enabled: boolean) => void;
+	handleFaceClick: (_meshname: string) => void;
 }
 
 /**

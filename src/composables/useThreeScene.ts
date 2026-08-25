@@ -38,6 +38,7 @@ export function useThreeScene() {
 	const camera = shallowRef<THREE.PerspectiveCamera>({} as THREE.PerspectiveCamera);
 	const modelGroup = shallowRef<THREE.Object3D>({} as THREE.Object3D);
 	const controls = shallowRef<TrackballControls>({} as TrackballControls);
+	const autoRotate = ref(false);
 
 	const loading = ref(true);
 	const loadProgress = ref<LoadProgress>({ loaded: 0, total: 0, percent: 0 });
@@ -77,7 +78,6 @@ export function useThreeScene() {
 	const modelWorldQuat = new THREE.Quaternion();
 
 	const clock = new THREE.Timer();
-	const autoRotate = false;
 	/**
 	 * animate - 渲染循环（每帧执行）
 	 *
@@ -96,7 +96,7 @@ export function useThreeScene() {
 
 			cubeResult.cubeGroup.quaternion.copy(cameraWorldQuat).invert().multiply(modelWorldQuat);
 		}
-		if (autoRotate) {
+		if (autoRotate.value) {
 			modelGroup.value.rotateZ((Math.PI / 2) * clock.getDelta());
 		}
 
@@ -251,7 +251,14 @@ export function useThreeScene() {
 		const targetModelLocalQuat = parentWorldQuat.invert().multiply(targetModelWorldQuat);
 
 		const startQuat = modelGroup.value.quaternion.clone();
-		const duration = 500;
+
+		// 固定时长
+		// const duration = 500;
+
+		// 恒定角速度
+		const angle = startQuat.angleTo(targetModelLocalQuat);
+		const angularSpeed = Math.PI / 2; // 每秒 90°
+		const duration = Math.max(150, Math.min(1200, (angle / angularSpeed) * 1000));
 		const startTime = performance.now();
 
 		if (animationRafId) cancelAnimationFrame(animationRafId);
@@ -269,6 +276,13 @@ export function useThreeScene() {
 		};
 
 		animationRafId = requestAnimationFrame(animateRotation);
+	};
+
+	const toggleAutoRotate = () => {
+		autoRotate.value = !autoRotate.value;
+	};
+	const setAutoRotate = (enabled: boolean) => {
+		autoRotate.value = enabled;
 	};
 
 	/**
@@ -412,8 +426,12 @@ export function useThreeScene() {
 		modelSize,
 		isMoveMode,
 		moveSpeed,
+		autoRotate,
 		setMoveMode,
 		setMoveSpeed,
 		rotateToView,
+		toggleAutoRotate,
+		setAutoRotate,
+		handleFaceClick,
 	};
 }
