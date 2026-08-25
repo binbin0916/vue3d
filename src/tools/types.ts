@@ -35,6 +35,8 @@ export interface ToolContext {
 	/** 设置旋转状态 */
 	setAutoRotate: (_enabled: boolean) => void;
 	handleFaceClick: (_meshname: string) => void;
+	/** 切换坐标系显示状态 */
+	setAxesVisibe: (_meshname: boolean) => void;
 }
 
 /**

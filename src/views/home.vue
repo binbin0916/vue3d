@@ -31,6 +31,7 @@ const {
 	toggleAutoRotate,
 	setAutoRotate,
 	handleFaceClick,
+	setAxesVisibe,
 } = useThreeScene();
 
 const toolContext: ToolContext = {
@@ -64,6 +65,7 @@ const toolContext: ToolContext = {
 	toggleAutoRotate,
 	setAutoRotate,
 	handleFaceClick,
+	setAxesVisibe,
 };
 
 // ---- 颜色弹窗状态 ----

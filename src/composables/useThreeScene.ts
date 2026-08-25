@@ -38,6 +38,7 @@ export function useThreeScene() {
 	const camera = shallowRef<THREE.PerspectiveCamera>({} as THREE.PerspectiveCamera);
 	const modelGroup = shallowRef<THREE.Object3D>({} as THREE.Object3D);
 	const controls = shallowRef<TrackballControls>({} as TrackballControls);
+	const axes = shallowRef<THREE.AxesHelper>({} as THREE.AxesHelper);
 	const autoRotate = ref(false);
 
 	const loading = ref(true);
@@ -278,11 +279,22 @@ export function useThreeScene() {
 		animationRafId = requestAnimationFrame(animateRotation);
 	};
 
+	// 切换旋转状态
 	const toggleAutoRotate = () => {
 		autoRotate.value = !autoRotate.value;
 	};
+	// 切换旋转状态
 	const setAutoRotate = (enabled: boolean) => {
 		autoRotate.value = enabled;
+	};
+
+	// 切换坐标系显示
+	const setAxesVisibe = (enabled: boolean) => {
+		if (enabled) {
+			(axes.value.material as any).opacity = 1;
+		} else {
+			(axes.value.material as any).opacity = 0;
+		}
 	};
 
 	/**
@@ -318,6 +330,7 @@ export function useThreeScene() {
 
 			modelGroup.value = result.group;
 			modelSize.value = result.modelSize;
+			axes.value = result.axes;
 			scene.value.add(modelGroup.value);
 
 			camera.value = createCamera(result.modelSize, modelGroup.value.position);
@@ -433,5 +446,6 @@ export function useThreeScene() {
 		toggleAutoRotate,
 		setAutoRotate,
 		handleFaceClick,
+		setAxesVisibe,
 	};
 }

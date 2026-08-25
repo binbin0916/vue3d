@@ -3,6 +3,7 @@ import { setMoveSpeed } from './move';
 import { viewFront, viewBack, viewLeft, viewRight, viewTop, viewBottom, viewOrigin, viewRotate, resetViewRotate } from './view';
 import { measureDistance, measureAngle, measureArea } from './measure';
 import { annotateText, annotatePin } from './annotate';
+import { showAxes, hideAxes } from './axes';
 import { sectionPlaneX, sectionPlaneY, sectionPlaneZ, sectionBoxInner, sectionBoxOuter, sectionCustom } from './section';
 import { materialWireframe, materialXray, materialNormal, materialSolid, restoreMaterial } from './material';
 import { exportScreenshot, exportGlb, exportGltf } from './export';
@@ -18,8 +19,14 @@ export const toolRegistry: Record<string, ToolHandler> = {
 	'return-origin': viewOrigin,
 	// 移动
 	'move:setSpeed': setMoveSpeed,
+
+	// 旋转
 	rotate: viewRotate,
 	'rotate:restore': resetViewRotate,
+
+	// 坐标系
+	axes: showAxes,
+	'axes:restore': hideAxes,
 
 	// 视角
 	'view-front': viewFront,
