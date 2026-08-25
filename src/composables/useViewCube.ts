@@ -6,7 +6,7 @@ import { cubeTextConfigs } from '@/utils/view';
 /** cube 渲染区域尺寸（px） */
 const CUBE_SIZE = 150;
 
-export const useViewCube = (container: HTMLElement) => {
+export const useViewCube = (container: HTMLElement, onFaceClick?: (meshName: string) => void) => {
 	// ---- 独立 DOM 容器 ----
 	const cubeContainer = document.createElement('div');
 	cubeContainer.style.cssText = `
@@ -73,7 +73,6 @@ export const useViewCube = (container: HTMLElement) => {
 						texture.anisotropy = cubeRenderer.capabilities.getMaxAnisotropy();
 						texture.wrapS = THREE.ClampToEdgeWrapping;
 						texture.wrapT = THREE.ClampToEdgeWrapping;
-
 						material.map = texture;
 						material.color.setHex(0xffffff);
 						material.needsUpdate = true;
@@ -105,8 +104,9 @@ export const useViewCube = (container: HTMLElement) => {
 
 		// 缩放到容器 1/2 大小（正交相机 frustum 为 ±1，目标占 1 个单位）
 		const maxDim = Math.max(size.x, size.y, size.z);
+
 		if (maxDim > 0) {
-			cubeGroup.scale.setScalar(1 / maxDim);
+			cubeGroup.scale.setScalar(maxDim * 0.08);
 		}
 
 		cubeScene.add(cubeGroup);
@@ -175,7 +175,16 @@ export const useViewCube = (container: HTMLElement) => {
 	const handleClick = (event: MouseEvent) => {
 		pointer.copy(getNDC(event as unknown as PointerEvent));
 		raycaster.setFromCamera(pointer, cubeCamera);
-		raycaster.intersectObjects(cubeMeshs, true);
+		const intersects = raycaster.intersectObjects(cubeMeshs, true);
+
+		if (intersects.length > 0) {
+			const hit = intersects[0];
+			if (!hit) return;
+			const mesh = hit.object as THREE.Mesh;
+			if (mesh.isMesh && mesh.name && onFaceClick) {
+				onFaceClick(mesh.name);
+			}
+		}
 	};
 
 	cubeRenderer.domElement.addEventListener('pointermove', handleMouseMove, false);

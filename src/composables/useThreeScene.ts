@@ -5,6 +5,7 @@ import type { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import { createRenderer, createScene, createCamera, addLights, loadModel, createControls, createCSS2DRenderer } from '@/three';
 import type { LoadProgress } from '@/three';
 import { useViewCube } from './useViewCube';
+import { cubeRotateConfigs } from '@/utils/view';
 
 const MODEL_PATH = '/model/get/';
 
@@ -71,6 +72,12 @@ export function useThreeScene() {
 		}
 	};
 
+	// 旋转四元数
+	const cameraWorldQuat = new THREE.Quaternion();
+	const modelWorldQuat = new THREE.Quaternion();
+
+	const clock = new THREE.Timer();
+	const autoRotate = false;
 	/**
 	 * animate - 渲染循环（每帧执行）
 	 *
@@ -79,14 +86,22 @@ export function useThreeScene() {
 	 */
 	const animate = () => {
 		rafId = requestAnimationFrame(animate);
-		render();
-
-		// 同步 ViewCube 旋转（相机四元数的逆）
-		if (cubeResult) {
-			cubeResult.cubeGroup.quaternion.copy(camera.value.quaternion).invert();
-		}
 
 		controls.value.update();
+
+		// 同步 ViewCube 旋转（跟随模型）
+		if (cubeResult) {
+			camera.value.getWorldQuaternion(cameraWorldQuat);
+			modelGroup.value.getWorldQuaternion(modelWorldQuat);
+
+			cubeResult.cubeGroup.quaternion.copy(cameraWorldQuat).invert().multiply(modelWorldQuat);
+		}
+		if (autoRotate) {
+			modelGroup.value.rotateZ((Math.PI / 2) * clock.getDelta());
+		}
+
+		clock.update();
+		render();
 	};
 
 	/**
@@ -206,6 +221,56 @@ export function useThreeScene() {
 		moveSpeed.value = speed;
 	};
 
+	// ---- 面点击旋转动画 ----
+	let animationRafId = 0;
+
+	/**
+	 * handleFaceClick - 处理 ViewCube 面点击事件
+	 *
+	 * @description 根据 mesh name 匹配 cubeRotateConfigs，平滑过渡模型到目标旋转角度
+	 */
+	const handleFaceClick = (meshName: string) => {
+		const config = cubeRotateConfigs[meshName];
+		if (!config || !modelGroup.value || !camera.value) return;
+
+		// Cube 配置表示期望的“相机空间 / 屏幕空间”姿态
+		const targetViewQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(config[0] ?? 0, config[1] ?? 0, config[2] ?? 0, 'XYZ'));
+
+		// 当前相机世界旋转
+		const cameraWorldQuat = new THREE.Quaternion();
+		camera.value.getWorldQuaternion(cameraWorldQuat);
+
+		// modelGroup 的父节点世界旋转；当前为 scene 时通常是单位四元数，保留是为兼容层级变换
+		const parentWorldQuat = new THREE.Quaternion();
+		modelGroup.value.parent?.getWorldQuaternion(parentWorldQuat);
+
+		// 使 inverse(cameraQ) * targetModelWorldQ = targetViewQuat
+		const targetModelWorldQuat = cameraWorldQuat.clone().multiply(targetViewQuat);
+
+		// 将世界空间的目标旋转转换为 modelGroup 的局部旋转
+		const targetModelLocalQuat = parentWorldQuat.invert().multiply(targetModelWorldQuat);
+
+		const startQuat = modelGroup.value.quaternion.clone();
+		const duration = 500;
+		const startTime = performance.now();
+
+		if (animationRafId) cancelAnimationFrame(animationRafId);
+
+		const animateRotation = () => {
+			const elapsed = performance.now() - startTime;
+			const t = Math.min(elapsed / duration, 1);
+			const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+			modelGroup.value.quaternion.slerpQuaternions(startQuat, targetModelLocalQuat, ease);
+
+			if (t < 1) {
+				animationRafId = requestAnimationFrame(animateRotation);
+			}
+		};
+
+		animationRafId = requestAnimationFrame(animateRotation);
+	};
+
 	/**
 	 * init - 初始化 3D 场景
 	 *
@@ -246,7 +311,7 @@ export function useThreeScene() {
 			controls.value = createControls(camera.value, renderer.value.domElement, result.modelSize);
 
 			// ViewCube（独立渲染器 + DOM 容器）
-			cubeResult = useViewCube(container);
+			cubeResult = useViewCube(container, handleFaceClick);
 
 			animate();
 			window.addEventListener('resize', onResize);
