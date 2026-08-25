@@ -24,9 +24,13 @@ const {
 	controls,
 	modelSize,
 	moveSpeed,
+	autoRotate,
 	setMoveMode,
 	setMoveSpeed,
 	rotateToView,
+	toggleAutoRotate,
+	setAutoRotate,
+	handleFaceClick,
 } = useThreeScene();
 
 const toolContext: ToolContext = {
@@ -51,9 +55,15 @@ const toolContext: ToolContext = {
 	get moveSpeed() {
 		return moveSpeed.value;
 	},
+	get autoRotate() {
+		return autoRotate.value;
+	},
 	setMoveMode,
 	setMoveSpeed,
 	rotateToView,
+	toggleAutoRotate,
+	setAutoRotate,
+	handleFaceClick,
 };
 
 // ---- 颜色弹窗状态 ----
