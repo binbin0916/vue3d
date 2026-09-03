@@ -96,26 +96,8 @@ const tools: ToolItem[] = [
 		icon: 'section',
 		label: '剖切',
 		children: [
-			{
-				id: 'section-plane',
-				icon: 'section',
-				label: '平面剖切',
-				children: [
-					{ id: 'section-plane-x', icon: 'section', label: 'X轴平面', activatable: true },
-					{ id: 'section-plane-y', icon: 'section', label: 'Y轴平面', activatable: true },
-					{ id: 'section-plane-z', icon: 'section', label: 'Z轴平面', activatable: true },
-				],
-			},
-			{
-				id: 'section-box',
-				icon: 'section',
-				label: '盒式剖切',
-				children: [
-					{ id: 'section-box-inner', icon: 'section', label: '内部剖切', activatable: true },
-					{ id: 'section-box-outer', icon: 'section', label: '外部剖切', activatable: true },
-				],
-			},
-			{ id: 'section-custom', icon: 'section', label: '自定义剖切', activatable: true },
+			{ id: 'section-plane', icon: 'section', label: '平面剖切', activatable: true, group: 'section' },
+			{ id: 'section-sphere', icon: 'section', label: '球形剖切', activatable: true, group: 'section' },
 		],
 	},
 	{
@@ -236,7 +218,7 @@ function onDragEnd() {
  * @description section-* 前缀转换为 section:* 格式，其余原样返回
  */
 function getActionId(id: string): string {
-	return id.startsWith('section-') ? `section:${id.replace('section-', '')}` : id;
+	return id;
 }
 
 /**

@@ -26,6 +26,8 @@ export interface ModelResult {
 	modelSize: number;
 	/** 模型局部坐标系 */
 	axes: THREE.AxesHelper;
+	/** 模型包围盒 */
+	box: THREE.Box3;
 }
 
 /**
@@ -96,6 +98,7 @@ export function loadModel(url: string, onProgress?: (_progress: LoadProgress) =>
 				const center = new THREE.Vector3();
 				box.getCenter(center);
 				scene.position.sub(center);
+				scene.name = 'modelGroup';
 
 				const size = new THREE.Vector3();
 				box.getSize(size);
@@ -128,7 +131,7 @@ export function loadModel(url: string, onProgress?: (_progress: LoadProgress) =>
 
 				group.add(axes, scene);
 
-				resolve({ scene, meshes, group, modelSize, axes });
+				resolve({ scene, meshes, group, modelSize, axes, box });
 			},
 			(xhr) => {
 				if (xhr.lengthComputable && onProgress) {

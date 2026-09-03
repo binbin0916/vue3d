@@ -15,6 +15,7 @@ export function createRenderer(domEl: HTMLElement): THREE.WebGLRenderer {
 		antialias: true,
 		alpha: true,
 		preserveDrawingBuffer: true,
+		stencil: true,
 	});
 
 	renderer.setPixelRatio(window.devicePixelRatio * 2);

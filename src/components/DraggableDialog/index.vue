@@ -42,7 +42,7 @@ const props = withDefaults(defineProps<Props>(), {
 	top: '80px',
 	draggable: true,
 	resizable: true,
-	closeOnPressEscape: true,
+	closeOnPressEscape: false,
 	showClose: true,
 	destroyOnClose: false,
 	appendToBody: true,
@@ -137,6 +137,8 @@ function open() {
 }
 
 function close() {
+	if (!isVisible.value) return;
+	emit('update:modelValue', false);
 	emit('close');
 	isAnimating.value = true;
 	setTimeout(() => {
