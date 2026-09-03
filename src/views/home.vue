@@ -9,6 +9,7 @@ import ToolBar from '@/components/ToolBar/index.vue';
 import RadialMenu from '@/components/RadialMenu/index.vue';
 import DraggableDialog from '@/components/DraggableDialog/index.vue';
 import ColorPicker from '@/components/ColorPicker/index.vue';
+import SectionDialog from '@/components/SectionDialog/index.vue';
 
 const toolStore = useToolStore();
 
@@ -25,6 +26,8 @@ const {
 	modelSize,
 	moveSpeed,
 	autoRotate,
+	meshes,
+	box,
 	setMoveMode,
 	setMoveSpeed,
 	rotateToView,
@@ -32,6 +35,8 @@ const {
 	setAutoRotate,
 	handleFaceClick,
 	setAxesVisibe,
+	addFrameTask,
+	removeFrameTask,
 } = useThreeScene();
 
 const toolContext: ToolContext = {
@@ -59,6 +64,12 @@ const toolContext: ToolContext = {
 	get autoRotate() {
 		return autoRotate.value;
 	},
+	get meshes() {
+		return meshes.value;
+	},
+	get box() {
+		return box.value;
+	},
 	setMoveMode,
 	setMoveSpeed,
 	rotateToView,
@@ -66,41 +77,66 @@ const toolContext: ToolContext = {
 	setAutoRotate,
 	handleFaceClick,
 	setAxesVisibe,
+	addFrameTask,
+	removeFrameTask,
 };
 
-// ---- 颜色弹窗状态 ----
-const showColorDialog = ref(false);
 const currentColor = ref('#ffffff');
-const activeColorToolId = ref('');
 
 /**
- * 检查是否有颜色工具激活，显示/隐藏颜色弹窗
+ * createDialogBinding - 创建工具弹窗的完整绑定
+ *
+ * 自动完成：工具激活 ↔ 弹窗显示同步、弹窗关闭时取消激活并恢复场景
+ *
+ * @param toolPrefix - 工具 ID 前缀（如 'material-solid'、'section-'）
+ * @returns showDialog（弹窗显示状态）和 activeToolId（当前激活的工具 ID）
  */
-watch(
-	() => toolStore.activeTools,
-	() => {
-		let foundColorTool = false;
-		for (const id of toolStore.activeTools) {
-			// 通过 toolRegistry 检查是否是材质工具（带颜色）
-			if (id.startsWith('material-solid')) {
-				foundColorTool = true;
-				activeColorToolId.value = id;
-				break;
+function createDialogBinding(toolPrefix: string) {
+	const showDialog = ref(false);
+	const activeToolId = ref('');
+
+	// 工具激活/取消 → 同步弹窗显示
+	watch(
+		() => toolStore.activeTools,
+		() => {
+			let found = false;
+			for (const id of toolStore.activeTools) {
+				if (id.startsWith(toolPrefix)) {
+					found = true;
+					activeToolId.value = id;
+					break;
+				}
 			}
+			showDialog.value = found;
+			if (!found) activeToolId.value = '';
+		},
+		{ deep: true }
+	);
+
+	// 弹窗关闭 → 取消激活并恢复场景
+	watch(showDialog, (visible) => {
+		if (!visible && activeToolId.value) {
+			const restoreId = `${activeToolId.value}:restore`;
+			if (toolRegistry[restoreId]) {
+				handleToolAction(restoreId);
+			}
+			toolStore.deactivate(activeToolId.value);
 		}
-		showColorDialog.value = foundColorTool;
-		if (!foundColorTool) activeColorToolId.value = '';
-	},
-	{ deep: true }
-);
+	});
+
+	return { showDialog, activeToolId };
+}
+
+const colorDialog = createDialogBinding('material-solid');
+const sectionDialog = createDialogBinding('section-');
 
 /**
  * handleColorChange - 颜色选择器变化处理
  */
 const handleColorChange = (color: string) => {
 	currentColor.value = color;
-	if (activeColorToolId.value) {
-		handleToolAction(activeColorToolId.value, color);
+	if (colorDialog.activeToolId.value) {
+		handleToolAction(colorDialog.activeToolId.value, color);
 	}
 };
 
@@ -118,7 +154,7 @@ const handleToolAction = (action: string, payload?: any) => {
  * handleRadialSelect - RadialMenu 非激活型菜单项点击处理
  */
 const handleRadialSelect = (item: { id: string; label: string }) => {
-	const actionId = item.id.startsWith('section-') ? `section:${item.id.replace('section-', '')}` : item.id;
+	const actionId = item.id;
 	handleToolAction(actionId);
 };
 
@@ -126,7 +162,7 @@ const handleRadialSelect = (item: { id: string; label: string }) => {
  * handleRadialActivate - RadialMenu 激活型菜单项状态变化处理
  */
 const handleRadialActivate = (id: string, activated: boolean) => {
-	const actionId = id.startsWith('section-') ? `section:${id.replace('section-', '')}` : id;
+	const actionId = id;
 	if (activated) {
 		handleToolAction(actionId);
 	} else {
@@ -159,10 +195,17 @@ onUnmounted(() => {
 		<ToolBar @tool-action="handleToolAction" />
 
 		<!-- 颜色选择弹窗 -->
-		<DraggableDialog v-model="showColorDialog" title="颜色选择" width="320px" top="120px">
+		<DraggableDialog v-model="colorDialog.showDialog.value" title="颜色选择" width="320px" top="120px">
 			<ColorPicker v-model="currentColor" @change="handleColorChange" />
 		</DraggableDialog>
-		<!--  -->
+		<!-- 剖切弹窗 -->
+		<DraggableDialog v-model="sectionDialog.showDialog.value" title="剖切设置" width="320px" top="120px">
+			<SectionDialog
+				@invert="handleToolAction('section-plane:invert')"
+				@reset="handleToolAction('section-plane:reset')"
+				@visible="handleToolAction('section-plane:visible', 123)"
+			/>
+		</DraggableDialog>
 	</div>
 </template>
 

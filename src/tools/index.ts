@@ -4,7 +4,7 @@ import { viewFront, viewBack, viewLeft, viewRight, viewTop, viewBottom, viewOrig
 import { measureDistance, measureAngle, measureArea } from './measure';
 import { annotateText, annotatePin } from './annotate';
 import { showAxes, hideAxes } from './axes';
-import { sectionPlaneX, sectionPlaneY, sectionPlaneZ, sectionBoxInner, sectionBoxOuter, sectionCustom } from './section';
+import { sectionPlane, sectionSphere, sectionReset, sectionInvert, sectionVisible } from './section';
 import { materialWireframe, materialXray, materialNormal, materialSolid, restoreMaterial } from './material';
 import { exportScreenshot, exportGlb, exportGltf } from './export';
 
@@ -46,12 +46,12 @@ export const toolRegistry: Record<string, ToolHandler> = {
 	'annotate-pin': annotatePin,
 
 	// 剖切
-	'section:plane-x': sectionPlaneX,
-	'section:plane-y': sectionPlaneY,
-	'section:plane-z': sectionPlaneZ,
-	'section:box-inner': sectionBoxInner,
-	'section:box-outer': sectionBoxOuter,
-	'section:custom': sectionCustom,
+	'section-plane': sectionPlane,
+	'section-plane:restore': sectionReset,
+	'section-sphere': sectionSphere,
+	'section-sphere:restore': sectionReset,
+	'section-plane:invert': sectionInvert,
+	'section-plane:visible': sectionVisible,
 
 	// 材质
 	'material-wireframe': materialWireframe,

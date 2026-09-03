@@ -22,6 +22,10 @@ export interface ToolContext {
 	modelSize: number;
 	/** 移动速度倍率 */
 	moveSpeed: number;
+	/** 模型中所有 Mesh 对象的扁平数组 */
+	meshes: THREE.Mesh[];
+	/** model 包围盒 */
+	box: THREE.Box3;
 	/** 切换移动模式 */
 	setMoveMode: (_enabled: boolean) => void;
 	/** 设置移动速度 */
@@ -37,6 +41,10 @@ export interface ToolContext {
 	handleFaceClick: (_meshname: string) => void;
 	/** 切换坐标系显示状态 */
 	setAxesVisibe: (_meshname: boolean) => void;
+	/** 插入动画 */
+	addFrameTask: (_id: string, _task: FrameTask) => void;
+	/** 结束动画 */
+	removeFrameTask: (_id: string) => void;
 }
 
 /**
@@ -45,3 +53,11 @@ export interface ToolContext {
  * @description 每个工具动作对应一个处理器函数，接收上下文和可选参数
  */
 export type ToolHandler = (_ctx: ToolContext, _payload?: any) => void;
+
+export type FrameTask = (_context: {
+	delta: number; // 两帧间隔，单位：秒
+	elapsed: number; // 从场景动画启动起的累计时间，单位：秒
+	scene: THREE.Scene;
+	camera: THREE.PerspectiveCamera;
+	modelGroup: THREE.Object3D;
+}) => void;

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ViewCubeMesh } from './ViewCubeMesh.js';
-import { FACES, getFaceConfigs, getModelRotations } from './faces.js';
+import { getFaceConfigs, getModelRotations } from './faces.js';
 
 /**
  * ViewCube - A customizable 3D orientation cube for Three.js and Potree

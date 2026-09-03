@@ -6,6 +6,7 @@ import { createRenderer, createScene, createCamera, addLights, loadModel, create
 import type { LoadProgress } from '@/three';
 import { useViewCube } from './useViewCube';
 import { cubeRotateConfigs } from '@/utils/view';
+import type { FrameTask } from '@/tools/types';
 
 const MODEL_PATH = '/model/get/';
 
@@ -39,6 +40,8 @@ export function useThreeScene() {
 	const modelGroup = shallowRef<THREE.Object3D>({} as THREE.Object3D);
 	const controls = shallowRef<TrackballControls>({} as TrackballControls);
 	const axes = shallowRef<THREE.AxesHelper>({} as THREE.AxesHelper);
+	const meshes = ref<THREE.Mesh[]>([]);
+	const box = shallowRef<THREE.Box3>({} as THREE.Box3);
 	const autoRotate = ref(false);
 
 	const loading = ref(true);
@@ -52,6 +55,25 @@ export function useThreeScene() {
 	let previousMousePosition = { x: 0, y: 0 };
 	let containerElement: HTMLElement | null = null;
 	let rafId = 0;
+
+	const frameTasks = new Map<string, FrameTask>();
+
+	/**
+	 * 动态注册逐帧执行的动画任务。
+	 * 若 ID 已存在，新任务会覆盖旧任务。
+	 * @returns 注销函数，推荐在 onUnmounted 中调用。
+	 */
+	const addFrameTask = (id: string, task: FrameTask) => {
+		frameTasks.set(id, task);
+
+		return () => {
+			frameTasks.delete(id);
+		};
+	};
+
+	const removeFrameTask = (id: string) => {
+		frameTasks.delete(id);
+	};
 
 	// ---- ViewCube（独立渲染器 + DOM） ----
 	let cubeResult: ReturnType<typeof useViewCube> | null = null;
@@ -78,7 +100,7 @@ export function useThreeScene() {
 	const cameraWorldQuat = new THREE.Quaternion();
 	const modelWorldQuat = new THREE.Quaternion();
 
-	const clock = new THREE.Timer();
+	const clock = new THREE.Clock();
 	/**
 	 * animate - 渲染循环（每帧执行）
 	 *
@@ -88,20 +110,38 @@ export function useThreeScene() {
 	const animate = () => {
 		rafId = requestAnimationFrame(animate);
 
+		const delta = clock.getDelta();
+		const elapsed = clock.getElapsedTime();
+
 		controls.value.update();
 
-		// 同步 ViewCube 旋转（跟随模型）
 		if (cubeResult) {
 			camera.value.getWorldQuaternion(cameraWorldQuat);
 			modelGroup.value.getWorldQuaternion(modelWorldQuat);
-
 			cubeResult.cubeGroup.quaternion.copy(cameraWorldQuat).invert().multiply(modelWorldQuat);
 		}
+
 		if (autoRotate.value) {
-			modelGroup.value.rotateZ((Math.PI / 2) * clock.getDelta());
+			modelGroup.value.rotateZ((Math.PI / 2) * delta);
 		}
 
-		clock.update();
+		// 执行从其他文件动态注册的逐帧逻辑
+		frameTasks.forEach((task, id) => {
+			try {
+				task({
+					delta,
+					elapsed,
+					scene: scene.value,
+					camera: camera.value,
+					modelGroup: modelGroup.value,
+				});
+			} catch (error) {
+				// 单个任务报错时自动移除，避免每帧重复报错
+				console.error(`[Three frame task: ${id}] 执行失败，已移除`, error);
+				frameTasks.delete(id);
+			}
+		});
+
 		render();
 	};
 
@@ -331,6 +371,8 @@ export function useThreeScene() {
 			modelGroup.value = result.group;
 			modelSize.value = result.modelSize;
 			axes.value = result.axes;
+			meshes.value = result.meshes;
+			box.value = result.box;
 			scene.value.add(modelGroup.value);
 
 			camera.value = createCamera(result.modelSize, modelGroup.value.position);
@@ -361,6 +403,7 @@ export function useThreeScene() {
 	 */
 	const dispose = () => {
 		cancelAnimationFrame(rafId);
+		frameTasks.clear();
 		window.removeEventListener('resize', onResize);
 		containerElement?.removeEventListener('mousedown', onMouseDown);
 		window.removeEventListener('mousemove', onMouseMove);
@@ -440,6 +483,8 @@ export function useThreeScene() {
 		isMoveMode,
 		moveSpeed,
 		autoRotate,
+		meshes,
+		box,
 		setMoveMode,
 		setMoveSpeed,
 		rotateToView,
@@ -447,5 +492,7 @@ export function useThreeScene() {
 		setAutoRotate,
 		handleFaceClick,
 		setAxesVisibe,
+		addFrameTask,
+		removeFrameTask,
 	};
 }

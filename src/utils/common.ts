@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
 /**
  * 数字滚动动画
  * @param duration 动画持续时间(ms)
@@ -99,3 +102,101 @@ export const createTextTexture = (text: string, rotation: number = 0): THREE.Can
 
 	return texture;
 };
+
+/**
+ * getBoundingBoxPoints - 获取包围盒的 8 个角点和 12 条边
+ *
+ * @param box - Three.js 包围盒
+ * @returns vertices: 8 个角点, edges: 12 条边的顶点索引对
+ */
+export function getBoundingBoxPoints(box: THREE.Box3): {
+	vertices: THREE.Vector3[];
+	edges: [number, number][];
+} {
+	const { min, max } = box;
+
+	// 8 个角点（按 XYZ 符号组合排列）
+	const vertices = [
+		new THREE.Vector3(min.x, min.y, min.z), // 0: ---
+		new THREE.Vector3(max.x, min.y, min.z), // 1: +--
+		new THREE.Vector3(max.x, max.y, min.z), // 2: ++-
+		new THREE.Vector3(min.x, max.y, min.z), // 3: -+-
+		new THREE.Vector3(min.x, min.y, max.z), // 4: --+
+		new THREE.Vector3(max.x, min.y, max.z), // 5: +-+
+		new THREE.Vector3(max.x, max.y, max.z), // 6: +++
+		new THREE.Vector3(min.x, max.y, max.z), // 7: -++
+	];
+
+	// 12 条边（每条边由两个顶点索引定义）
+	const edges: [number, number][] = [
+		// 底面 (z = min.z)
+		[0, 1],
+		[1, 2],
+		[2, 3],
+		[3, 0],
+		// 顶面 (z = max.z)
+		[4, 5],
+		[5, 6],
+		[6, 7],
+		[7, 4],
+		// 竖棱 (连接底面和顶面)
+		[0, 4],
+		[1, 5],
+		[2, 6],
+		[3, 7],
+	];
+
+	return { vertices, edges };
+}
+
+/**
+ * createLine2FromVertices - 从顶点和边创建 Line2 线框
+ *
+ * @param vertices - 顶点数组
+ * @param edges - 边的索引对数组（默认为立方体 12 条边）
+ * @param options - 线条样式选项
+ */
+export function createLine2FromVertices(
+	vertices: THREE.Vector3[],
+	edges: [number, number][],
+	options: {
+		color?: THREE.ColorRepresentation;
+		lineWidth?: number;
+		dashed?: boolean;
+		dashSize?: number;
+		gapSize?: number;
+		opacity?: number;
+	} = {}
+): LineSegments2 {
+	const { color = 0x00ff00, lineWidth = 3, dashed = false, dashSize = 0.1, gapSize = 0.05, opacity = 1.0 } = options;
+
+	// 从 vertices + edges 提取位置数据
+	const positions: number[] = [];
+	for (const [i, j] of edges) {
+		const vi = vertices[i];
+		const vj = vertices[j];
+		if (vi && vj) {
+			positions.push(vi.x, vi.y, vi.z);
+			positions.push(vj.x, vj.y, vj.z);
+		}
+	}
+
+	const geometry = new LineSegmentsGeometry();
+	geometry.setPositions(positions);
+
+	const material = new LineMaterial({
+		color,
+		linewidth: lineWidth,
+		resolution: new THREE.Vector2(window.innerWidth, window.innerHeight),
+		dashed,
+		dashSize,
+		gapSize,
+		transparent: opacity < 1,
+		opacity,
+	});
+
+	const line = new LineSegments2(geometry, material);
+	line.computeLineDistances();
+
+	return line;
+}
