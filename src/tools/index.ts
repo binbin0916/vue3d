@@ -4,7 +4,7 @@ import { viewFront, viewBack, viewLeft, viewRight, viewTop, viewBottom, viewOrig
 import { measureDistance, measureAngle, measureArea } from './measure';
 import { annotateText, annotatePin } from './annotate';
 import { showAxes, hideAxes } from './axes';
-import { sectionPlane, sectionSphere, sectionReset, sectionInvert, sectionVisible } from './section';
+import { sectionPlane, sectionSphere, sectionReset, sectionResetPosition, sectionInvert, sectionVisible } from './section';
 import { materialWireframe, materialXray, materialNormal, materialSolid, restoreMaterial } from './material';
 import { exportScreenshot, exportGlb, exportGltf } from './export';
 
@@ -52,6 +52,7 @@ export const toolRegistry: Record<string, ToolHandler> = {
 	'section-sphere:restore': sectionReset,
 	'section-plane:invert': sectionInvert,
 	'section-plane:visible': sectionVisible,
+	'section-plane:reset': sectionResetPosition,
 
 	// 材质
 	'material-wireframe': materialWireframe,
