@@ -89,7 +89,7 @@ export function loadModel(url: string, onProgress?: (_progress: LoadProgress) =>
 						meshes.push(obj);
 					}
 				});
-
+				scene.renderOrder = 0;
 				scene.matrixWorldAutoUpdate = true;
 				scene.matrixWorldNeedsUpdate = true;
 				scene.scale.set(1, 1, 1);

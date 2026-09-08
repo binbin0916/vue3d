@@ -121,12 +121,27 @@ export const materialWireframe: ToolHandler = (ctx: ToolContext) => {
 	// 保存原始材质并应用线框
 	saveOriginalMaterials(ctx);
 	forEachMesh(ctx, (mesh) => {
-		const mat = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
-		const originalColor = mat && 'color' in mat && mat.color instanceof THREE.Color ? mat.color : new THREE.Color(0xcccccc);
-		mesh.material = new THREE.MeshBasicMaterial({
-			color: originalColor,
-			wireframe: true,
-		});
+		const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+		const colors = materials.map((mat) =>
+			mat && 'color' in mat && mat.color instanceof THREE.Color ? mat.color.clone() : new THREE.Color(0xcccccc)
+		);
+
+		// 如果是单材质
+		if (!Array.isArray(mesh.material)) {
+			mesh.material = new THREE.MeshBasicMaterial({
+				color: colors[0],
+				wireframe: true,
+			});
+		} else {
+			// 多材质：每个子材质都设为线框
+			mesh.material = materials.map((mat, i) => {
+				const color = colors[i] || new THREE.Color(0xcccccc);
+				return new THREE.MeshBasicMaterial({
+					color: color,
+					wireframe: true,
+				});
+			});
+		}
 	});
 };
 
