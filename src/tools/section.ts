@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { ref, shallowRef } from 'vue';
 import { getBoundingBoxPoints, createLine2FromVertices } from '@/utils/common';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // ======================================= 状态 =========================================================
 
@@ -13,9 +14,8 @@ const poGroup = shallowRef<THREE.Group>({} as THREE.Group);
 const transformControls = shallowRef<TransformControls | null>(null);
 const transformHelper = shallowRef<THREE.Object3D | null>(null);
 
-// stencil 暂时禁用
-// const stencilGroups = ref<THREE.Group[]>([]);
-// const planeObjects = ref<THREE.Mesh[]>([]);
+const stencilGroups = ref<THREE.Group[]>([]);
+const planeObjects = ref<THREE.Mesh[]>([]);
 
 // 保存上下文引用，供逐帧任务使用
 let savedCtx: ToolContext | null = null;
@@ -84,12 +84,22 @@ export const sectionPlane: ToolHandler = (ctx: ToolContext) => {
 	// 将裁剪平面应用到模型材质（真正的裁剪）
 	applyClippingToModel(ctx);
 
-	// stencil fill 暂时禁用
-	// initStencilFills(ctx);
+	// stencil 初始化延迟到第一帧 plane 同步之后，
+	// 避免 planes 全为 (0,0,0,0) 时创建错误的裁剪/stencil。
+	let stencilReady = false;
 
-	// 注册逐帧任务：每帧同步 planes → 辅助面位置
+	// 注册逐帧任务：每帧同步 planes → 辅助面位置 + 截面填充面定位
 	ctx.addFrameTask(PLANE_SYNC_TASK_ID, () => {
 		syncPlanesFromVisualPlanes();
+
+		if (!stencilReady && planes.value[0] && planes.value[0].normal.lengthSq() > 0) {
+			stencilReady = true;
+			initStencilFills(ctx);
+		}
+
+		if (stencilReady) {
+			updateStencilPolygonPositions();
+		}
 	});
 };
 
@@ -116,7 +126,7 @@ export const sectionReset: ToolHandler = (ctx: ToolContext) => {
 	ctx.removeFrameTask(PLANE_SYNC_TASK_ID);
 	savedCtx = null;
 	removeClippingFromModel(ctx);
-	// disposeStencilFills(); // stencil 暂时禁用
+	disposeStencilFills();
 	disposeControls(ctx);
 };
 
@@ -136,6 +146,11 @@ const planesVisible = ref(true);
  * sectionVisible - 切换剖切面可见性
  */
 export const sectionVisible: ToolHandler = () => {
+	// 切换截面填充面（po）可见性
+	planeObjects.value.forEach((po) => {
+		po.visible = planesVisible.value;
+	});
+
 	// 切换辅助面可见性
 	utilGroup.value.children.forEach((child) => {
 		if (child.name.startsWith('plane-') && child instanceof THREE.Mesh) {
@@ -157,7 +172,7 @@ export const sectionVisible: ToolHandler = () => {
 // ======================================= 内部：材质裁剪 =========================================================
 
 const applyClippingToModel = (ctx: ToolContext) => {
-	ctx.modelGroup.traverse((child) => {
+	ctx.meshes.forEach((child) => {
 		if (child instanceof THREE.Mesh) {
 			const materials = Array.isArray(child.material) ? child.material : [child.material];
 			materials.forEach((mat) => {
@@ -169,6 +184,19 @@ const applyClippingToModel = (ctx: ToolContext) => {
 			});
 		}
 	});
+
+	// ctx.modelGroup.traverse((child) => {
+	// 	if (child instanceof THREE.Mesh) {
+	// 		const materials = Array.isArray(child.material) ? child.material : [child.material];
+	// 		materials.forEach((mat) => {
+	// 			if (mat instanceof THREE.Material) {
+	// 				mat.clippingPlanes = planes.value;
+	// 				mat.clipShadows = true;
+	// 				mat.needsUpdate = true;
+	// 			}
+	// 		});
+	// 	}
+	// });
 };
 
 const removeClippingFromModel = (ctx: ToolContext) => {
@@ -226,6 +254,12 @@ const disposeControls = (ctx: ToolContext) => {
 
 	ctx.modelGroup.remove(utilGroup.value);
 	utilGroup.value = {} as THREE.Group;
+
+	ctx.modelGroup.remove(sliceObject.value);
+	sliceObject.value = {} as THREE.Group;
+
+	ctx.scene.remove(poGroup.value);
+	poGroup.value = {} as THREE.Group;
 
 	planes.value.length = 0;
 };
@@ -349,12 +383,18 @@ const createBoundPlane = (ctx: ToolContext): THREE.Mesh[] => {
 };
 
 // ======================================= 内部：Stencil Fill =========================================================
-// 以下 stencil 相关函数暂时禁用
 
-/*
+/**
+ * 创建 stencil 标记组：仅渲染 BackSide，在裁剪平面处标记模型截面。
+ *
+ * 原理：
+ * - stencil 组使用 depthTest: true，因此只有通过深度测试的片段才写入 stencil
+ * - 在截面处，模型被裁剪，无深度值 → 背面通过深度测试 → stencil +1
+ * - 在模型表面，模型已有深度值 → 背面在模型后面 → 深度测试失败 → stencil 不变
+ * - 这样 stencil 仅在截面处非零
+ */
 const createPlaneStencilGroup = (geometry: THREE.BufferGeometry, plane: THREE.Plane, renderOrder: number): THREE.Group => {
 	const group = new THREE.Group();
-
 	const baseMat = new THREE.MeshBasicMaterial();
 	baseMat.depthWrite = false;
 	baseMat.depthTest = false;
@@ -362,74 +402,84 @@ const createPlaneStencilGroup = (geometry: THREE.BufferGeometry, plane: THREE.Pl
 	baseMat.stencilWrite = true;
 	baseMat.stencilFunc = THREE.AlwaysStencilFunc;
 
-	const matBack = baseMat.clone();
-	matBack.side = THREE.BackSide;
-	matBack.clippingPlanes = [plane];
-	matBack.stencilFail = THREE.IncrementWrapStencilOp;
-	matBack.stencilZFail = THREE.IncrementWrapStencilOp;
-	matBack.stencilZPass = THREE.IncrementWrapStencilOp;
+	// back faces
+	const mat0 = baseMat.clone();
+	mat0.side = THREE.BackSide;
+	mat0.clippingPlanes = [plane];
+	mat0.stencilFail = THREE.IncrementWrapStencilOp;
+	mat0.stencilZFail = THREE.IncrementWrapStencilOp;
+	mat0.stencilZPass = THREE.IncrementWrapStencilOp;
 
-	const meshBack = new THREE.Mesh(geometry, matBack);
-	meshBack.renderOrder = renderOrder;
-	group.add(meshBack);
+	const mesh0 = new THREE.Mesh(geometry, mat0);
+	mesh0.renderOrder = renderOrder;
+	group.add(mesh0);
 
-	const matFront = baseMat.clone();
-	matFront.side = THREE.FrontSide;
-	matFront.clippingPlanes = [plane];
-	matFront.stencilFail = THREE.DecrementWrapStencilOp;
-	matFront.stencilZFail = THREE.DecrementWrapStencilOp;
-	matFront.stencilZPass = THREE.DecrementWrapStencilOp;
+	// front faces
+	const mat1 = baseMat.clone();
+	mat1.side = THREE.FrontSide;
+	mat1.clippingPlanes = [plane];
+	mat1.stencilFail = THREE.DecrementWrapStencilOp;
+	mat1.stencilZFail = THREE.DecrementWrapStencilOp;
+	mat1.stencilZPass = THREE.DecrementWrapStencilOp;
 
-	const meshFront = new THREE.Mesh(geometry, matFront);
-	meshFront.renderOrder = renderOrder;
-	group.add(meshFront);
+	const mesh1 = new THREE.Mesh(geometry, mat1);
+	mesh1.renderOrder = renderOrder;
+
+	group.add(mesh1);
 
 	return group;
 };
-*/
 
 /**
- * 初始化 stencil fill（截面填充）
+ * 初始化截面填充面（cut-face fill）
  *
  * 为每个裁剪平面创建：
  * 1. stencilGroup → sliceObject（modelGroup 子级，与模型同空间）
- *    不可见，用 stencil 缓冲标记截面区域
+ *    不可见，用 stencil 缓冲标记模型截面区域
  * 2. po → poGroup（scene 子级，world 空间定位）
  *    截面填充面，使用 stencil ref 检测只在截面处绘制
+ *
+ * 使用包围盒对角线作为填充面尺寸。
  */
-/*
 const initStencilFills = (ctx: ToolContext) => {
 	disposeStencilFills();
+
+	const geometries = ctx.meshes.map((item) => item.geometry);
+	let geometry: THREE.BufferGeometry;
+	if (geometries.length > 1) {
+		geometry = mergeGeometries(geometries, false);
+	} else {
+		geometry = geometries[0] as THREE.BufferGeometry;
+	}
 
 	const firstMesh = ctx.meshes[0];
 	if (!firstMesh) return;
 
-	const geometry = firstMesh.geometry.clone();
-
 	sliceObject.value = new THREE.Group();
 	ctx.modelGroup.add(sliceObject.value);
-
-	poGroup.value = new THREE.Group();
-	ctx.scene.add(poGroup.value);
 
 	const stencilGroupArr: THREE.Group[] = [];
 	const stencilPolygonArr: THREE.Mesh[] = [];
 
-	const fillGeometry = new THREE.PlaneGeometry(100, 100);
+	// 使用包围盒对角线长度作为填充面尺寸，确保覆盖整个截面
+	const size = new THREE.Vector3();
+	ctx.box.getSize(size);
+	const diag = size.length() * 1.5;
+	const fillGeometry = new THREE.PlaneGeometry(diag, diag);
 
+	poGroup.value = new THREE.Group();
 	for (let i = 0; i < planes.value.length; i++) {
 		const plane = planes.value[i]!;
 
-		const stencilGrp = createPlaneStencilGroup(geometry, plane, i + 1);
+		// 创建 stencil 标记组（仅 BackSide，depthTest: true）
+		const stencilGrp = createPlaneStencilGroup(geometry.clone(), plane, i + 1);
 		sliceObject.value.add(stencilGrp);
 		stencilGroupArr.push(stencilGrp);
 
-
+		// 创建填充面：被其余5个平面裁剪，stencil != 0 时绘制
 		const otherPlanes = planes.value.filter((p) => p !== plane) as THREE.Plane[];
-		const poMat = new THREE.MeshStandardMaterial({
+		const poMat = new THREE.MeshBasicMaterial({
 			color: 0xb7b7b7,
-			metalness: 0.5,
-			roughness: 0.75,
 			clippingPlanes: otherPlanes,
 			stencilWrite: true,
 			stencilRef: 0,
@@ -437,28 +487,28 @@ const initStencilFills = (ctx: ToolContext) => {
 			stencilFail: THREE.ReplaceStencilOp,
 			stencilZFail: THREE.ReplaceStencilOp,
 			stencilZPass: THREE.ReplaceStencilOp,
-			side: THREE.DoubleSide,
-			transparent: true,
-			opacity: 0.85,
-			depthWrite: true,
+			// 使用 polygonOffset 避免 Z-fighting
+			polygonOffset: true,
+			polygonOffsetFactor: -1,
+			polygonOffsetUnits: -1,
 		});
 
 		const po = new THREE.Mesh(fillGeometry, poMat);
-		po.renderOrder = i + 1.1;
-		po.onAfterRender = (renderer: THREE.WebGLRenderer) => {
+		po.onAfterRender = function (renderer) {
 			renderer.clearStencil();
 		};
-		po.visible = planesVisible.value;
+		po.renderOrder = i + 1.1;
+		// po.visible = planesVisible.value;
+
 		poGroup.value.add(po);
 		stencilPolygonArr.push(po);
 	}
+	ctx.scene.add(poGroup.value);
 
 	stencilGroups.value = stencilGroupArr;
 	planeObjects.value = stencilPolygonArr;
 };
-*/
 
-/*
 const disposeStencilFills = () => {
 	for (const grp of stencilGroups.value) {
 		grp.traverse((child) => {
@@ -500,7 +550,6 @@ const disposeStencilFills = () => {
 	}
 	poGroup.value = {} as THREE.Group;
 };
-*/
 
 // ======================================= 逐帧同步 =========================================================
 
@@ -565,15 +614,15 @@ const syncPlanesFromVisualPlanes = () => {
  * plane.coplanarPoint(po.position) → 将 po 定位到平面上的任意一点
  * po.lookAt(po.position - plane.normal) → 使 po 正对截面
  */
-/*
 const updateStencilPolygonPositions = () => {
 	for (let i = 0; i < planeObjects.value.length; i++) {
 		const plane = planes.value[i];
 		const po = planeObjects.value[i];
 		if (!plane || !po) continue;
 
+		// 定位到平面上
 		plane.coplanarPoint(po.position);
+		// 朝向法线反向（使 po 正对截面）
 		po.lookAt(po.position.x - plane.normal.x, po.position.y - plane.normal.y, po.position.z - plane.normal.z);
 	}
 };
-*/
