@@ -110,7 +110,7 @@ export function loadModel(url: string, onProgress?: (_progress: LoadProgress) =>
 				// scene.scale.setScalar(scaleFactor);
 
 				// 坐标轴长度：取模型尺寸的 20%，可按需要调整
-				const axes = new THREE.AxesHelper(modelSize * 0.8);
+				const axes = new THREE.AxesHelper(modelSize * 1.5);
 				axes.name = 'modelLocalAxes';
 				axes.position.set(0, 0, 0); // scene 已居中，原点即模型中心
 				axes.renderOrder = 999;
