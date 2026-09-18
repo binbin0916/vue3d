@@ -11,9 +11,9 @@ import * as THREE from 'three';
  * @returns {THREE.PerspectiveCamera} 配置好的透视相机实例
  */
 export function createCamera(modelSize: number, lookAt: THREE.Vector3): THREE.PerspectiveCamera {
-	const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, modelSize / 20, 1000);
+	const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
 
-	camera.position.set(0, 0, modelSize * 2);
+	camera.position.set(0, 0, 2);
 
 	// const distance = modelSize * 2;
 	// const theta = Math.PI / 4; // 水平角 (绕Y轴)
