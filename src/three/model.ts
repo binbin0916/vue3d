@@ -104,6 +104,8 @@ export function loadModel(url: string, onProgress?: (_progress: LoadProgress) =>
 				box.getSize(size);
 				const modelSize = Math.max(size.x, size.y, size.z);
 
+				scene.scale.setScalar(1 / modelSize);
+
 				// 自适应缩放：将模型包围盒最大边统一缩放到 TARGET_SIZE，
 				// 保持 modelSize 原始值不变，作为相机、灯光、控制器的尺寸基准
 				// const scaleFactor = TARGET_SIZE / modelSize;

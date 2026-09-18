@@ -200,3 +200,81 @@ export function createLine2FromVertices(
 
 	return line;
 }
+
+/**
+ * 归一化模型：让所有模型在场景中大小一致，且在相机中占相同比例
+ *
+ * @param {THREE.Object3D} model      - 要归一化的模型
+ * @param {THREE.Camera}   camera     - 场景相机
+ * @param {Object}         options    - 可选配置
+ * @param {number}         options.fillRatio   - 模型占视口的比例 (0~1)，默认 0.8
+ * @param {number}         options.distance    - 相机到模型的距离，默认 2
+ * @param {boolean}        options.center      - 是否居中到原点，默认 true
+ * @param {THREE.Vector3}  options.pivot       - 归一化后模型中心放置的位置，默认 (0,0,0)
+ * @returns {Object} { scale, size, center, distance } 归一化信息
+ */
+export const normalizeModel = (
+	model: THREE.Object3D,
+	camera: THREE.PerspectiveCamera | THREE.OrthographicCamera,
+	options = {
+		fillRatio: 0.8,
+		distance: 2,
+		center: true,
+		pivot: new THREE.Vector3(0, 0, 0),
+	}
+) => {
+	const { fillRatio, distance, center, pivot } = options;
+
+	model.updateMatrixWorld(true);
+	const box = new THREE.Box3().setFromObject(model);
+	const size = new THREE.Vector3();
+	const centerVec = new THREE.Vector3();
+	box.getSize(size);
+	box.getCenter(centerVec);
+
+	const rawMaxSize = Math.max(size.x, size.y, size.z);
+	if (rawMaxSize === 0) {
+		console.warn('[normalizeModel] 模型尺寸为 0，跳过归一化');
+		return null;
+	}
+
+	let visibleHeight, visibleWidth;
+
+	if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) {
+		const _camera = camera as THREE.PerspectiveCamera;
+		const fov = (_camera.fov * Math.PI) / 180;
+		visibleHeight = 2 * Math.tan(fov / 2) * distance;
+		visibleWidth = visibleHeight * _camera.aspect;
+	} else if ((camera as THREE.OrthographicCamera).isOrthographicCamera) {
+		const _camera = camera as THREE.OrthographicCamera;
+		visibleHeight = (_camera.top - _camera.bottom) / camera.zoom;
+		visibleWidth = (_camera.right - _camera.left) / camera.zoom;
+	} else {
+		console.warn('[normalizeModel] 未知相机类型，使用默认可视范围');
+		visibleHeight = 2;
+		visibleWidth = 2;
+	}
+
+	const fitSize = Math.min(visibleHeight, visibleWidth) * fillRatio;
+	const scale = fitSize / rawMaxSize;
+	model.scale.setScalar(scale);
+
+	if (center) {
+		model.position.set(pivot.x - centerVec.x * scale, pivot.y - centerVec.y * scale, pivot.z - centerVec.z * scale);
+	}
+
+	// camera.position.set(0, 0, distance);
+	// camera.lookAt(pivot);
+	// camera.updateProjectionMatrix();
+
+	return {
+		scale,
+		originalSize: size.clone(),
+		originalCenter: centerVec.clone(),
+		rawMaxSize,
+		fitSize,
+		distance,
+		visibleHeight,
+		visibleWidth,
+	};
+};
