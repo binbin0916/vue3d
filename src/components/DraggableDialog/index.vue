@@ -44,7 +44,7 @@ const props = withDefaults(defineProps<Props>(), {
 	resizable: true,
 	closeOnPressEscape: false,
 	showClose: true,
-	destroyOnClose: false,
+	destroyOnClose: true,
 	appendToBody: true,
 	zIndex: 1000,
 });
