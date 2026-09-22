@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, toRefs } from 'vue';
+import { computed, ref, toRefs, h, watch } from 'vue';
 import { density } from '@/utils/constants';
 import type { ToolContext } from '@/tools';
 import SvgIcon from '@/components/SvgIcon/index.vue';
-import AnimatedSelect from '@/components/AnimatedSelect/index.vue';
 import { formatDecimal } from '@/utils/number';
 import { copyText } from '@/utils/clipboard';
+import { ElMessageBox, ElInput, ElMessage } from 'element-plus';
 
 /**
  * ModelPropDialog - 模型总属性弹窗内容
@@ -46,31 +46,109 @@ const boxVolume = computed(() => {
 	return '--';
 });
 const selectedMaterial = ref('铝合金');
-const customDensity = ref('');
-// const weight = ref('--');
-const entityCount = computed(() => userData.value.solids.length || 1);
-const vertexCount = computed(() => userData.value);
-const lineCount = ref('--');
-const triangleCount = ref('--');
-
-const weight = computed(() => {
-	const p = currDensity.value.find((item) => item.value)?.density || 0;
-	const v = userData.value.totalVolume || userData.value.totalVolumeMesh;
-	const w = ((v / 1000) * p) / 1000 || 0; // 单位：kg
-
-	// 小于 1kg 用 g
-	if (Math.abs(w) < 1) {
-		return {
-			value: w * 1000,
-			unit: 'g',
-		};
-	}
-
-	return {
-		value: w,
-		unit: 'kg',
-	};
+const customDensity = ref({
+	label: '',
+	value: '',
+	density: '',
 });
+
+const entityCount = computed(() => userData.value.solids.length || 1);
+const vertexCount = computed(() => userData.value.vertexCount || '--');
+const lineCount = computed(() => userData.value.edgeCount || '--');
+const triangleCount = computed(() => userData.value.triangleCount || '--');
+
+const weight = ref({ value: 0, unit: 'g' });
+
+watch(
+	() => selectedMaterial.value,
+	() => {
+		const p = currDensity.value.find((item) => item.value === selectedMaterial.value)?.density || 0;
+		const v = userData.value.totalVolume || userData.value.totalVolumeMesh;
+		const w = ((v / 1000) * p) / 1000 || 0; // 单位：kg
+		if (Math.abs(w) < 1) {
+			weight.value = {
+				value: w * 1000,
+				unit: 'g',
+			};
+		} else {
+			weight.value = {
+				value: w,
+				unit: 'Kg',
+			};
+		}
+	},
+	{
+		immediate: true,
+	}
+);
+
+const handleChange = async (v: string) => {
+	// custom
+	if (v === 'custom') {
+		await ElMessageBox({
+			title: '自定义预设材料',
+			message: () =>
+				h('div', { class: 'material-form' }, [
+					// 材料名称
+					h('div', { class: 'form-item' }, [
+						h('label', { class: 'form-label' }, '材料名称'),
+						h(ElInput, {
+							modelValue: customDensity.value.value,
+							'onUpdate:modelValue': (v: string) => (customDensity.value.value = v),
+							placeholder: '请输入材料名称',
+							clearable: true,
+						}),
+					]),
+					// 密度（带单位后缀）
+					h('div', { class: 'form-item' }, [
+						h('label', { class: 'form-label' }, '密度'),
+						h(
+							ElInput,
+							{
+								modelValue: customDensity.value.density,
+								'onUpdate:modelValue': (v: string) => (customDensity.value.density = v),
+								placeholder: '请输入材料密度',
+								clearable: true,
+							},
+							{
+								append: () => h('span', 'g/cm³'),
+							}
+						),
+					]),
+				]),
+			showCancelButton: true,
+			confirmButtonText: '确定',
+			cancelButtonText: '取消',
+			customClass: 'material-dialog',
+			beforeClose: (action, inst, done) => {
+				if (action !== 'confirm') {
+					customDensity.value.value = '';
+					customDensity.value.density = '';
+					done();
+					return;
+				}
+				if (!customDensity.value.value.trim()) {
+					ElMessage.warning('请输入材料名称');
+					return;
+				}
+				if (!customDensity.value.density.trim()) {
+					ElMessage.warning('请输入材料密度');
+					return;
+				}
+
+				customDensity.value.label = `${customDensity.value.value.trim()}(${customDensity.value.density}g/cm³)`;
+
+				currDensity.value.splice(currDensity.value.length - 1, 0, {
+					...customDensity.value,
+					density: Number(customDensity.value.density),
+				});
+
+				selectedMaterial.value = customDensity.value.value.trim();
+				done();
+			},
+		});
+	}
+};
 </script>
 
 <template>
@@ -121,10 +199,14 @@ const weight = computed(() => {
 			<div class="mp-row">
 				<span class="mp-row__label">
 					<span>预设材料</span>
-					<svg-icon class="mp-icon" name="question" :size="16"></svg-icon>
+					<el-tooltip effect="dark" content="预设材料会改变属性面板中的重量" placement="top">
+						<svg-icon class="mp-icon" name="question" :size="16"></svg-icon>
+					</el-tooltip>
 				</span>
 				<span class="mp-row__value mp-row__value--control">
-					<AnimatedSelect v-model="selectedMaterial" :options="density" />
+					<el-select v-model="selectedMaterial" placeholder="请选择" @change="handleChange">
+						<el-option v-for="item in currDensity" :key="item.value" :label="item.label" :value="item.value" />
+					</el-select>
 				</span>
 			</div>
 			<div v-if="selectedMaterial === 'custom'" class="mp-row">
@@ -261,5 +343,29 @@ $border-color-light: #e4e7ed;
 	&:focus {
 		border-color: $primary;
 	}
+}
+</style>
+<style>
+.material-form .form-item {
+	display: flex;
+	align-items: center;
+	margin-bottom: 16px;
+}
+.material-form .form-label {
+	width: 70px;
+	flex-shrink: 0;
+	color: #606266;
+	font-size: 14px;
+	text-align: right;
+	margin-right: 14px;
+}
+.material-form .form-item .el-input {
+	flex: 1;
+}
+.material-dialog .el-input-group__append {
+	background: #f5f7fa;
+	color: #909399;
+	font-size: 13px;
+	padding: 0 12px;
 }
 </style>
