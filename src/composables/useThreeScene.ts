@@ -7,6 +7,7 @@ import type { LoadProgress } from '@/three';
 import { useViewCube } from './useViewCube';
 import { cubeRotateConfigs } from '@/utils/view';
 import type { FrameTask } from '@/tools/types';
+import type { GLBSceneUserData } from '@/types/userdata-types';
 
 const MODEL_PATH = '/model/get/';
 
@@ -43,6 +44,7 @@ export function useThreeScene() {
 	const meshes = ref<THREE.Mesh[]>([]);
 	const box = shallowRef<THREE.Box3>({} as THREE.Box3);
 	const autoRotate = ref(false);
+	const sceneUserData = ref<GLBSceneUserData>({} as GLBSceneUserData);
 
 	const loading = ref(true);
 	const loadProgress = ref<LoadProgress>({ loaded: 0, total: 0, percent: 0 });
@@ -373,6 +375,7 @@ export function useThreeScene() {
 			axes.value = result.axes;
 			meshes.value = result.meshes;
 			box.value = result.box;
+			sceneUserData.value = result.sceneUserData;
 			scene.value.add(modelGroup.value);
 
 			camera.value = createCamera(result.modelSize, modelGroup.value.position);
@@ -485,6 +488,7 @@ export function useThreeScene() {
 		autoRotate,
 		meshes,
 		box,
+		sceneUserData,
 		setMoveMode,
 		setMoveSpeed,
 		rotateToView,
