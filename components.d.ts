@@ -18,6 +18,7 @@ declare module 'vue' {
     ElOption: typeof import('element-plus/es')['ElOption']
     ElSelect: typeof import('element-plus/es')['ElSelect']
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
+    FloatTooltip: typeof import('./src/components/FloatTooltip/index.vue')['default']
     ModelLoader: typeof import('./src/components/ModelLoader/index.vue')['default']
     ModelPropDialog: typeof import('./src/components/ModelPropDialog/index.vue')['default']
     NextLoading: typeof import('./src/components/NextLoading/index.vue')['default']

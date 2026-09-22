@@ -4,6 +4,7 @@ import { RouterView } from 'vue-router';
 
 <template>
 	<RouterView />
+	<FloatTooltip />
 </template>
 
 <style scoped></style>
