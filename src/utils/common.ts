@@ -278,3 +278,7 @@ export const normalizeModel = (
 		visibleWidth,
 	};
 };
+
+/**
+ *
+ */

@@ -54,6 +54,16 @@ const tools: ToolItem[] = [
 		activatable: true,
 	},
 	{
+		id: 'modelprop',
+		icon: 'modelprop',
+		label: '模型属性',
+		children: [
+			{ id: 'modelprop-pointLineFace', icon: 'export', label: '点线面属性', activatable: true, group: 'modelprop' },
+			{ id: 'modelprop-entity', icon: 'export', label: '实体属性', activatable: true, group: 'modelprop' },
+			{ id: 'modelprop-overall', icon: 'export', label: '总属性', activatable: true, group: 'modelprop' },
+		],
+	},
+	{
 		id: 'axes',
 		icon: 'axes',
 		label: '坐标系',

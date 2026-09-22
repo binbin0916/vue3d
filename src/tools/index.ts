@@ -7,6 +7,7 @@ import { showAxes, hideAxes } from './axes';
 import { sectionPlane, sectionSphere, sectionReset, sectionResetPosition, sectionInvert, sectionVisible } from './section';
 import { materialWireframe, materialXray, materialNormal, materialSolid, restoreMaterial } from './material';
 import { exportScreenshot, exportGlb, exportGltf } from './export';
+import { getPointLineFace, getEntity, getOverall } from './model';
 
 /**
  * toolRegistry - 工具动作注册表
@@ -69,6 +70,11 @@ export const toolRegistry: Record<string, ToolHandler> = {
 	'export-screenshot': exportScreenshot,
 	'export-glb': exportGlb,
 	'export-gltf': exportGltf,
+
+	// 模型属性
+	'modelprop-pointLineFace': getPointLineFace, // 点线面属性
+	'modelprop-entity': getEntity, // 实体属性
+	'modelprop-overall': getOverall, // 总属性
 };
 
 export type { ToolContext, ToolHandler } from './types';

@@ -6,7 +6,7 @@ import { cubeTextConfigs } from '@/utils/view';
 /** cube 渲染区域尺寸（px） */
 const CUBE_SIZE = 150;
 
-export const useViewCube = (container: HTMLElement, onFaceClick?: (meshName: string) => void) => {
+export const useViewCube = (container: HTMLElement, onFaceClick?: (_meshName: string) => void) => {
 	// ---- 独立 DOM 容器 ----
 	const cubeContainer = document.createElement('div');
 	cubeContainer.style.cssText = `
@@ -49,7 +49,7 @@ export const useViewCube = (container: HTMLElement, onFaceClick?: (meshName: str
 	const cubeGroup = new THREE.Group();
 	const cubeMeshs: THREE.Mesh[] = [];
 
-	loader.load('/cubeview_1.glb', (gltf) => {
+	loader.load('/cubeview.glb', (gltf) => {
 		const scene = gltf.scene;
 		[...scene.children].forEach((obj: any) => {
 			if (obj.type === 'Mesh') {

@@ -15,6 +15,7 @@
 		"lint:format": "prettier --write --experimental-cli src/"
 	},
 	"dependencies": {
+		"big.js": "^7.0.1",
 		"pinia": "^3.0.4",
 		"three": "^0.184.0",
 		"vue": "^3.5.38",
@@ -22,6 +23,7 @@
 	},
 	"devDependencies": {
 		"@tsconfig/node24": "^24.0.4",
+		"@types/big.js": "^7.0.0",
 		"@types/node": "^24.13.2",
 		"@types/three": "^0.184.1",
 		"@vitejs/plugin-vue": "^6.0.7",

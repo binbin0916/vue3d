@@ -10,6 +10,7 @@ import RadialMenu from '@/components/RadialMenu/index.vue';
 import DraggableDialog from '@/components/DraggableDialog/index.vue';
 import ColorPicker from '@/components/ColorPicker/index.vue';
 import SectionDialog from '@/components/SectionDialog/index.vue';
+import ModelPropDialog from '@/components/ModelPropDialog/index.vue';
 
 const toolStore = useToolStore();
 
@@ -28,6 +29,7 @@ const {
 	autoRotate,
 	meshes,
 	box,
+	sceneUserData,
 	setMoveMode,
 	setMoveSpeed,
 	rotateToView,
@@ -69,6 +71,9 @@ const toolContext: ToolContext = {
 	},
 	get box() {
 		return box.value;
+	},
+	get sceneUserData() {
+		return sceneUserData.value;
 	},
 	setMoveMode,
 	setMoveSpeed,
@@ -129,6 +134,7 @@ function createDialogBinding(toolPrefix: string) {
 
 const colorDialog = createDialogBinding('material-solid');
 const sectionDialog = createDialogBinding('section-');
+const modelPropDialog = createDialogBinding('modelprop-overall');
 
 /**
  * handleColorChange - 颜色选择器变化处理
@@ -205,6 +211,9 @@ onUnmounted(() => {
 				@reset="handleToolAction('section-plane:reset')"
 				@visible="handleToolAction('section-plane:visible', 123)"
 			/>
+		</DraggableDialog>
+		<DraggableDialog v-model="modelPropDialog.showDialog.value" title="模型总属性" width="360px" top="120px">
+			<ModelPropDialog :ctx="toolContext" :sceneUserData="sceneUserData" />
 		</DraggableDialog>
 	</div>
 </template>

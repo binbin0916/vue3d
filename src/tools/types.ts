@@ -1,3 +1,4 @@
+import type { GLBSceneUserData } from '@/types/userdata-types';
 import type * as THREE from 'three';
 import type { TrackballControls } from 'three/addons/controls/TrackballControls.js';
 
@@ -26,6 +27,8 @@ export interface ToolContext {
 	meshes: THREE.Mesh[];
 	/** model 包围盒 */
 	box: THREE.Box3;
+	/** 模型总属性 */
+	sceneUserData: GLBSceneUserData;
 	/** 切换移动模式 */
 	setMoveMode: (_enabled: boolean) => void;
 	/** 设置移动速度 */
@@ -61,3 +64,16 @@ export type FrameTask = (_context: {
 	camera: THREE.PerspectiveCamera;
 	modelGroup: THREE.Object3D;
 }) => void;
+
+/**
+ * 模型级自定义属性
+ * @description 模型级自定义属性, 包括面积、体积等基础信息
+ */
+export interface MeshUserData {
+	/** 源 STEP 文件名(不含扩展名) */
+	source: string;
+	/** 模型包围盒中心 */
+	modelCenter: [number, number, number];
+	/** 模型三向尺寸 */
+	modelSize: [number, number, number];
+}
