@@ -209,7 +209,7 @@ onUnmounted(() => {
 			<SectionDialog
 				@invert="handleToolAction('section-plane:invert')"
 				@reset="handleToolAction('section-plane:reset')"
-				@visible="handleToolAction('section-plane:visible', 123)"
+				@visible="handleToolAction('section-plane:visible')"
 			/>
 		</DraggableDialog>
 		<DraggableDialog v-model="modelPropDialog.showDialog.value" title="模型总属性" width="360px" top="120px">

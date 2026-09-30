@@ -443,7 +443,7 @@ $bp-xl: 1440px;
 
 .toolbar-wrapper {
 	position: fixed;
-	bottom: clamp(12px, 2vw, 32px);
+	bottom: clamp(24px, 2vw, 32px);
 	left: 50%;
 	transform: translateX(-50%);
 	z-index: 1000;

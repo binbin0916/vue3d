@@ -102,7 +102,7 @@ export function useThreeScene() {
 	const cameraWorldQuat = new THREE.Quaternion();
 	const modelWorldQuat = new THREE.Quaternion();
 
-	const clock = new THREE.Clock();
+	const timer = new THREE.Timer();
 	/**
 	 * animate - 渲染循环（每帧执行）
 	 *
@@ -111,9 +111,10 @@ export function useThreeScene() {
 	 */
 	const animate = () => {
 		rafId = requestAnimationFrame(animate);
+		timer.update();
 
-		const delta = clock.getDelta();
-		const elapsed = clock.getElapsedTime();
+		const delta = timer.getDelta();
+		const elapsed = timer.getElapsed();
 
 		controls.value.update();
 

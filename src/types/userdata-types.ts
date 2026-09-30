@@ -1,5 +1,5 @@
 /**
- * GLB UserData 类型定义(scene 级 + mesh 级)
+ * GLB UserData 类型定义(scene 级 + mesh 级 + 边级)
  *
  * 对应文档: `docs/glb-userdata-fields.md`
  * 适用范围: `export_glb.py`(commit `d1d68be` 起)导出的 GLB。
@@ -8,10 +8,13 @@
  *   glTF scene 级 extras  -> THREE.Group.userData   (GLBSceneUserData)
  *   glTF mesh 级 extras   -> THREE.Mesh.userData    (GLBMeshUserData)
  *   每 STEP 面 = 一个独立 glTF Mesh, 面级数据全部在 mesh.userData。
+ *   每 STEP 拓扑边 = 一个独立 LINES glTF Mesh, 加载为 THREE.LineSegments,
+ *   边级数据在 LineSegments.userData (GLBEdgeUserData)。
  *
  * 口径约定(两套数值相差约 0.1%~0.3%, 不可混用):
  *   - BRep 精确(几何真值):  scene.totalArea/totalVolume, mesh.areaExact/mesh.volume
  *   - 渲染网格(前端/参考 GLB 同口径): scene.totalAreaMesh/totalVolumeMesh, mesh.area/mesh.volumeMesh
+ *   边的长度同样双口径: length(BRep 精确) / lengthMesh(折线近似)。
  *
  * 单位: 长度 mm, 面积 mm², 体积 mm³; 角度 弧度。
  */
@@ -52,6 +55,18 @@ export type FaceOrientation =
 	| 'FORWARD' // 正向
 	| 'REVERSED' // 反向
 	| 'INTERNAL'; // 内部
+
+/** 边曲线类型(value 取值, 来自 OCC GeomAbs_CurveType 映射) */
+export type EdgeType =
+	| 'line' // 直线
+	| 'circle' // 圆弧/整圆(整圆在 STEP 接缝处常拆成两条半圆边)
+	| 'ellipse' // 椭圆
+	| 'hyperbola' // 双曲线
+	| 'parabola' // 抛物线
+	| 'bezier' // 贝塞尔曲线
+	| 'bspline' // B 样条曲线
+	| 'offset' // 偏移曲线
+	| 'other'; // 其他自定义曲线类型
 
 /** 面积/体积来源标记(value 取值) */
 export type BRepSource =
@@ -154,6 +169,40 @@ export interface GLBMeshUserData {
 }
 
 // ---------------------------------------------------------------------------
+// 边级 (THREE.LineSegments.userData, 每条 STEP 拓扑边 = 一个 LINES Mesh)
+// ---------------------------------------------------------------------------
+
+/**
+ * 边级数据(THREE.LineSegments.userData; LineSegments.name = `_<源文件名>_edge_<边序号>`,
+ * 序号 1-based)。
+ *
+ * 几何: 仅 POSITION(折线采样点) + INDEX(相邻点两两成段, mode=LINES), 无 NORMAL;
+ * 所有边共用 1 个材质 mat_edge(默认深灰 #333, 线性 RGB)。
+ * 折线由 GCPnts_UniformDeflection(adaptor, deflection) 均匀离散化,
+ * 顶点已相对模型中心偏移(与面 mesh 一致)。
+ */
+export interface GLBEdgeUserData {
+	/** value: 恒为 "edge" — 固定标记, 用于前端区分面 Mesh 与边 LineSegments */
+	type: 'edge';
+	/** value: 见 EdgeType — 曲线类型 */
+	edgeType: EdgeType;
+	/** value: ≥0 mm — BRep 精确弧长(GCPnts_AbscissaPoint.Length, 几何真值) */
+	length: number;
+	/** value: ≥0 mm — 折线近似长度(相邻采样点间距求和, 随 deflection 变化, 恒 ≤ length) */
+	lengthMesh: number;
+	/** value: ≥0 的整数, 0-based — STEP 拓扑边序号(BRep 遍历顺序) */
+	index: number;
+	/** value: ≥0 的整数, 0-based; 游离边为 -1 — 所属 solid 序号 */
+	solidIndex: number;
+	/** value: true/false — 曲线是否几何闭合(整圆/周期曲线为 true; 按首末参数点重合判定) */
+	isClosed: boolean;
+	/** value: ≥2 的整数 — 折线采样点数(直线恒为 2) */
+	samplePoints: number;
+	/** value: >0 mm — 本次导出离散化精度 */
+	deflection: number;
+}
+
+// ---------------------------------------------------------------------------
 // scene 级 (THREE.Group.userData, 即 gltf.scene.userData)
 // ---------------------------------------------------------------------------
 
@@ -185,10 +234,10 @@ export interface GLBSolidInfo {
 export interface GLBUnits {
 	/** value: "mm" — 长度单位 */
 	length: 'mm';
-	/** value: "mm2" — 面积单位 */
-	area: 'mm2';
-	/** value: "mm3" — 体积单位 */
-	volume: 'mm3';
+	/** value: "mm²" — 面积单位 */
+	area: 'mm²';
+	/** value: "mm³" — 体积单位 */
+	volume: 'mm³';
 }
 
 /** 模型级数据(THREE.Group.userData, 即 gltf.scene.userData) */
@@ -199,14 +248,20 @@ export interface GLBSceneUserData {
 	modelCenter: Vec3;
 	/** value: [dx, dy, dz], mm — 模型三向尺寸(三角化网格顶点包围盒跨度) */
 	modelSize: Vec3;
-	/** value: ≥0 的整数 — 面数(同时等于 GLB mesh 数与 node 数) */
+	/** value: ≥0 的整数 — 面数(每个 STEP 面 = 一个 TRIANGLES Mesh; GLB mesh 总数 = faceCount + 拓扑边数 edgeCountTopo) */
 	faceCount: number;
-	/** value: ≥0 的整数 — 顶点数 */
+	/** value: ≥0 的整数 — 渲染网格顶点数(= 全部 POSITION accessor count 之和, 不做跨面坐标去重) */
 	vertexCount: number;
-	/** value: ≥0 的整数 — 线条数 */
+	/** value: ≥0 的整数 — 渲染网格线条数(逐 mesh 内按顶点索引对去重求和; 每个 STEP 面 = 独立 mesh, 相邻面的共享边各计各的) */
 	edgeCount: number;
-	/** value: ≥0 的整数 — 三角面数 */
+	/** value: ≥0 的整数 — 三角面数(= 全部索引 accessor count / 3) */
 	triangleCount: number;
+	/** value: ≥0 的整数 — 拓扑边数(BRep TopAbs_EDGE 遍历总数; 每边 = 一个 LineSegments mesh; 与网格口径 edgeCount 独立) */
+	edgeCountTopo: number;
+	/** value: ≥0 mm — 拓扑边总长(BRep 精确弧长 GCPnts_AbscissaPoint.Length 求和) */
+	edgeTotalLength: number;
+	/** value: 见 EdgeType 为键的对象 — 边类型分布(逐边 edgeType 计数, 与各 LineSegments.userData.edgeType 汇总一致) */
+	edgeTypeCounts: Partial<Record<EdgeType, number>>;
 	/** value: ≥0 mm² — 总面积, BRep 精确; 全失败时为 Σ三角化面积(见 areaMethod) */
 	totalArea: number;
 	/** value: ≥0 mm³ — 总体积, BRep 精确(OnlyClosed + SkipShared; 开放面模型为 0) */
@@ -229,12 +284,12 @@ export interface GLBSceneUserData {
 	volumeUnavailableCount: number;
 	/** value: {minimum, maximum}, mm — 整个模型包围盒(网格顶点坐标范围) */
 	boundingBox: BBox3;
-	/** value: 固定 {length:"mm", area:"mm2", volume:"mm3"} — 数值单位声明 */
+	/** value: 固定 {length:"mm", area:"mm²", volume:"mm³"} — 数值单位声明 */
 	units: GLBUnits;
 	/** value: GLBSolidInfo[] — per-solid 明细(数组长度 = solid 数) */
 	solids: GLBSolidInfo[];
 	/** value: true/false — 所有 solid 是否 BRep 拓扑闭合(非逐面网格闭合判定) */
 	isWatertight: boolean;
-	/** value: >0 mm — 最终三角化精度(微小模型 1.0 / 中型 0.1 / 大型取输入值; 超 10MB 自动增大重试 ×1.5) */
+	/** value: >0 mm — 最终三角化精度(命令行 --deflection, 统一精度不区分模型大小, 默认 0.001) */
 	deflection: number;
 }

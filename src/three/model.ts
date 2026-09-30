@@ -1,6 +1,9 @@
 import type { GLBSceneUserData } from '@/types/userdata-types';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { useCommonStore } from '@/stores/common';
+
+const { isMobile } = useCommonStore();
 
 /**
  * TARGET_SIZE - 模型统一缩放目标尺寸
@@ -75,22 +78,33 @@ export function loadModel(url: string, onProgress?: (_progress: LoadProgress) =>
 				scene.traverse((obj: any) => {
 					if (obj.isMesh && obj.type === 'Mesh') {
 						const src = obj.material;
-						obj.material = new THREE.MeshStandardMaterial({
-							map: src.map,
-							color: src.color,
-							normalMap: src.normalMap,
-							roughnessMap: src.roughnessMap,
-							metalnessMap: src.metalnessMap,
-							aoMap: src.aoMap,
-							emissiveMap: src.emissiveMap,
-							roughness: src.roughness ?? 0.5,
-							metalness: src.metalness ?? 0.0,
-							envMapIntensity: 1.0,
-							flatShading: false,
-						});
+
+						if (isMobile) {
+							obj.material = new THREE.MeshLambertMaterial({
+								map: src.map,
+								color: src.color,
+								emissiveMap: src.emissiveMap,
+								emissive: src.emissive ?? 0x000000,
+							});
+						} else {
+							obj.material = new THREE.MeshStandardMaterial({
+								map: src.map,
+								color: src.color,
+								normalMap: src.normalMap,
+								roughnessMap: src.roughnessMap,
+								metalnessMap: src.metalnessMap,
+								aoMap: src.aoMap,
+								emissiveMap: src.emissiveMap,
+								roughness: src.roughness ?? 0.5,
+								metalness: src.metalness ?? 0.0,
+								envMapIntensity: 1.0,
+								flatShading: false,
+							});
+						}
 						obj.material.side = THREE.DoubleSide;
 						obj.castShadow = true;
 						obj.receiveShadow = true;
+
 						meshes.push(obj);
 					}
 				});

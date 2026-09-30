@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { useCommonStore } from '@/stores/common';
+
+const { isMobile } = useCommonStore();
 
 /**
  * createRenderer - 创建 WebGL 渲染器
@@ -12,13 +15,14 @@ import * as THREE from 'three';
  */
 export function createRenderer(domEl: HTMLElement): THREE.WebGLRenderer {
 	const renderer = new THREE.WebGLRenderer({
-		antialias: true,
+		antialias: !isMobile,
 		alpha: true,
 		preserveDrawingBuffer: true,
 		stencil: true,
+		powerPreference: 'high-performance',
 	});
 
-	renderer.setPixelRatio(window.devicePixelRatio * 2);
+	renderer.setPixelRatio(Math.min(window.devicePixelRatio * 2, isMobile ? 1.5 : 2));
 	renderer.shadowMap.enabled = true;
 	renderer.shadowMap.type = THREE.PCFShadowMap;
 	renderer.outputColorSpace = THREE.SRGBColorSpace;

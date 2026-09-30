@@ -7,8 +7,8 @@ import { showTooltip } from '@/components/FloatTooltip/controller';
  *
  * @param {ToolContext} ctx - 工具执行上下文
  */
-export const getPointLineFace: ToolHandler = (ctx: ToolContext, payload?: number) => {
-	console.info(`output->点线面属性`, ctx);
+export const getPointLineFace: ToolHandler = (ctx: ToolContext) => {
+	// 拾取;
 };
 
 /**
