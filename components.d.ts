@@ -11,10 +11,8 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    AnimatedSelect: typeof import('./src/components/AnimatedSelect/index.vue')['default']
     ColorPicker: typeof import('./src/components/ColorPicker/index.vue')['default']
     DraggableDialog: typeof import('./src/components/DraggableDialog/index.vue')['default']
-    ElButton: typeof import('element-plus/es')['ElButton']
     ElOption: typeof import('element-plus/es')['ElOption']
     ElSelect: typeof import('element-plus/es')['ElSelect']
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
