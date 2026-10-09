@@ -1,5 +1,6 @@
 // import * as THREE from 'three';
-import type { ToolContext, ToolHandler } from './types';
+import type { ToolContext, ToolHandler, ToolDefinition } from './types';
+import { defineTool } from './registry';
 // import { FACES, getFaceConfigs } from '@/utils/cube';
 
 /**
@@ -63,3 +64,14 @@ export const viewOrigin: ToolHandler = (ctx) => setViewAngle(ctx, 'Triangle_Face
 export const viewRotate: ToolHandler = (ctx) => setViewAngle(ctx, 'rotate');
 /** 停止旋转 */
 export const resetViewRotate: ToolHandler = (ctx) => setViewAngle(ctx, 'rotate:reset');
+
+export const tools: ToolDefinition[] = [
+	defineTool({ id: 'return-origin', menu: { icon: 'home', label: '返回原点' }, activate: viewOrigin }),
+	defineTool({ id: 'view-front', menu: { icon: 'view-front', label: '正视图', group: 'view' }, activate: viewFront }),
+	defineTool({ id: 'view-back', menu: { icon: 'view-back', label: '后视图', group: 'view' }, activate: viewBack }),
+	defineTool({ id: 'view-left', menu: { icon: 'view-left', label: '左视图', group: 'view' }, activate: viewLeft }),
+	defineTool({ id: 'view-right', menu: { icon: 'view-right', label: '右视图', group: 'view' }, activate: viewRight }),
+	defineTool({ id: 'view-top', menu: { icon: 'view-top', label: '俯视图', group: 'view' }, activate: viewTop }),
+	defineTool({ id: 'view-bottom', menu: { icon: 'view-bottom', label: '仰视图', group: 'view' }, activate: viewBottom }),
+	defineTool({ id: 'rotate', menu: { icon: 'rotate', label: '旋转', activatable: true }, activate: viewRotate, deactivate: resetViewRotate }),
+];

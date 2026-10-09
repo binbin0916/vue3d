@@ -1,4 +1,5 @@
-import type { ToolContext, ToolHandler } from './types';
+import type { ToolContext, ToolHandler, ToolDefinition, CustomAction } from './types';
+import { defineTool, defineAction } from './registry';
 import * as THREE from 'three';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { ref, shallowRef } from 'vue';
@@ -626,3 +627,25 @@ const updateStencilPolygonPositions = () => {
 		po.lookAt(po.position.x - plane.normal.x, po.position.y - plane.normal.y, po.position.z - plane.normal.z);
 	}
 };
+
+export const tools: ToolDefinition[] = [
+	defineTool({
+		id: 'section-plane',
+		menu: { icon: 'section', label: '平面剖切', activatable: true, group: 'section' },
+		activate: sectionPlane,
+		deactivate: sectionReset,
+	}),
+	defineTool({
+		id: 'section-sphere',
+		menu: { icon: 'section', label: '球形剖切', activatable: true, group: 'section' },
+		activate: sectionSphere,
+		deactivate: sectionReset,
+	}),
+];
+
+/** 剖切弹窗的自定义动作（非菜单，独立注册） */
+export const actions: CustomAction[] = [
+	defineAction({ id: 'section-plane:invert', handler: sectionInvert }),
+	defineAction({ id: 'section-plane:visible', handler: sectionVisible }),
+	defineAction({ id: 'section-plane:reset', handler: sectionResetPosition }),
+];

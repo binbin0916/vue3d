@@ -3,14 +3,10 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import SvgIcon from '@/components/SvgIcon/index.vue';
 import { findItemById } from '@/utils/tree';
 import { useToolStore } from '@/stores/tool';
-
-interface MenuItem {
-	id: string;
-	icon: string;
-	label: string;
-	activatable?: boolean;
-	children?: MenuItem[];
-}
+import { resolveMenu } from '@/tools/registry';
+import { radialMenu } from '@/tools/menu.config';
+import { definitionsById } from '@/tools';
+import type { ToolItem } from '@/tools/types';
 
 /**
  * RadialMenu - 径向菜单组件
@@ -23,7 +19,7 @@ interface MenuItem {
  */
 const emit = defineEmits<{
 	/** 非激活型菜单项被选中时触发 */
-	select: [item: MenuItem];
+	select: [item: ToolItem];
 	/** 可激活型菜单项状态变化时触发 */
 	activate: [id: string, activated: boolean];
 }>();
@@ -34,52 +30,9 @@ const activeStack = ref<string[]>([]);
 const hoveredItem = ref<string | null>(null);
 const menuRef = ref<HTMLDivElement>();
 
-const menuItems: MenuItem[] = [
-	{
-		id: 'settings',
-		icon: 'settings',
-		label: '设置',
-		children: [
-			{ id: 'settings-grid', icon: 'grid', label: '网格显示', activatable: true },
-			{ id: 'settings-axes', icon: 'axes', label: '坐标轴', activatable: true },
-			{ id: 'settings-bg', icon: 'background', label: '背景色' },
-		],
-	},
-	{
-		id: 'camera',
-		icon: 'camera',
-		label: '相机',
-		children: [
-			{ id: 'return-origin', icon: 'reset', label: '重置视角' },
-			{ id: 'view-front', icon: 'view-front', label: '正视图' },
-			{ id: 'view-back', icon: 'view-back', label: '后视图' },
-			{ id: 'view-left', icon: 'view-left', label: '左视图' },
-			{ id: 'view-right', icon: 'view-right', label: '右视图' },
-			{ id: 'view-top', icon: 'view-top', label: '俯视图' },
-			{ id: 'view-bottom', icon: 'view-bottom', label: '仰视图' },
-		],
-	},
-	{
-		id: 'info',
-		icon: 'info',
-		label: '信息',
-		children: [
-			{ id: 'info-stats', icon: 'stats', label: '统计信息' },
-			{ id: 'material-wireframe', icon: 'wireframe', label: '线框模式', activatable: true },
-		],
-	},
-	{
-		id: 'help',
-		icon: 'help',
-		label: '帮助',
-		children: [
-			{ id: 'help-shortcuts', icon: 'shortcuts', label: '快捷键' },
-			{ id: 'help-about', icon: 'info', label: '关于' },
-		],
-	},
-];
+const menuItems: ToolItem[] = resolveMenu(radialMenu, definitionsById);
 
-const currentItems = ref<MenuItem[]>(menuItems);
+const currentItems = ref<ToolItem[]>(menuItems);
 
 const currentParent = computed(() => {
 	if (activeStack.value.length === 0) return null;
@@ -120,9 +73,9 @@ const resetMenu = () => {
  * - 可激活型：通过 toolStore 切换激活状态
  * - 普通型：触发 select 事件
  *
- * @param {MenuItem} item - 被点击的菜单项
+ * @param {ToolItem} item - 被点击的菜单项
  */
-const handleSelect = (item: MenuItem) => {
+const handleSelect = (item: ToolItem) => {
 	if (item.children && item.children.length > 0) {
 		activeStack.value.push(item.id);
 		currentItems.value = item.children;

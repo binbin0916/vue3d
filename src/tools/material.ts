@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import type { ToolContext, ToolHandler } from './types';
+import type { ToolContext, ToolHandler, ToolDefinition, CustomAction } from './types';
+import { defineTool, defineAction } from './registry';
 
 /**
  * originalMaterialsStore - 按 modelGroup 实例存储原始材质
@@ -169,16 +170,16 @@ export const materialNormal: ToolHandler = (ctx: ToolContext) => {
 	// TODO: 实现法线显示
 };
 
+/** 纯色模式默认颜色 */
+const DEFAULT_SOLID_COLOR = '#999999';
+
 /**
- * materialSolid - 纯色显示
- *
- * @description 将模型所有 Mesh 切换为纯色 MeshStandardMaterial，支持自定义颜色
+ * applySolidMaterial - 应用纯色材质
  *
  * @param {ToolContext} ctx - 工具执行上下文
- * @param {string} [payload='#999999'] - 纯色颜色（十六进制字符串）
+ * @param {string} color - 纯色颜色（十六进制字符串）
  */
-export const materialSolid: ToolHandler = (ctx: ToolContext, payload?: string) => {
-	const color = payload ?? '#999999';
+function applySolidMaterial(ctx: ToolContext, color: string): void {
 	applyMaterial(
 		ctx,
 		(c) => {
@@ -193,6 +194,29 @@ export const materialSolid: ToolHandler = (ctx: ToolContext, payload?: string) =
 		},
 		color
 	);
+}
+
+/**
+ * materialSolid - 纯色显示（菜单激活）
+ *
+ * @description 将模型所有 Mesh 切换为纯色 MeshStandardMaterial，使用默认颜色
+ *
+ * @param {ToolContext} ctx - 工具执行上下文
+ */
+export const materialSolid: ToolHandler = (ctx: ToolContext) => {
+	applySolidMaterial(ctx, DEFAULT_SOLID_COLOR);
+};
+
+/**
+ * setSolidColor - 应用指定纯色（自定义动作，供颜色选择器传参调用）
+ *
+ * @description 将模型切换为指定十六进制颜色的纯色材质；缺省时回退到默认色
+ *
+ * @param {ToolContext} ctx - 工具执行上下文
+ * @param {string} [payload] - 纯色颜色（十六进制字符串）
+ */
+export const setSolidColor: ToolHandler = (ctx: ToolContext, payload?: string) => {
+	applySolidMaterial(ctx, payload ?? DEFAULT_SOLID_COLOR);
 };
 
 /**
@@ -216,3 +240,19 @@ export const restoreMaterial: ToolHandler = (ctx: ToolContext) => {
 		mesh.visible = true;
 	});
 };
+
+export const tools: ToolDefinition[] = [
+	defineTool({ id: 'material-wireframe', menu: { icon: 'material', label: '线框模式', activatable: true, group: 'material' }, activate: materialWireframe, deactivate: restoreMaterial }),
+	defineTool({ id: 'material-xray', menu: { icon: 'material', label: 'X光模式', activatable: true, group: 'material' }, activate: materialXray, deactivate: restoreMaterial }),
+	defineTool({ id: 'material-normal', menu: { icon: 'material', label: '法线显示', activatable: true, group: 'material' }, activate: materialNormal, deactivate: restoreMaterial }),
+	defineTool({
+		id: 'material-solid',
+		menu: { icon: 'material', label: '纯色显示', activatable: true, group: 'material' },
+		defaultColor: DEFAULT_SOLID_COLOR,
+		activate: materialSolid,
+		deactivate: restoreMaterial,
+	}),
+];
+
+/** 颜色选择器的自定义动作（非菜单，传参应用纯色） */
+export const actions: CustomAction[] = [defineAction({ id: 'material-solid:color', handler: setSolidColor })];

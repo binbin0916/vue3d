@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, reactive, onMounted, onUnmounted, watch } from 'vue';
 import { useThreeScene } from '@/composables/useThreeScene';
-import { toolRegistry } from '@/tools';
+import { resolveToolAction, definitionsById } from '@/tools';
 import type { ToolContext } from '@/tools';
 import { useToolStore } from '@/stores/tool';
 import ModelLoader from '@/components/ModelLoader/index.vue';
@@ -14,77 +14,9 @@ import ModelPropDialog from '@/components/ModelPropDialog/index.vue';
 
 const toolStore = useToolStore();
 
-const {
-	init,
-	dispose,
-	loading,
-	loadProgress,
-	renderer,
-	scene,
-	camera,
-	modelGroup,
-	controls,
-	modelSize,
-	moveSpeed,
-	autoRotate,
-	meshes,
-	box,
-	sceneUserData,
-	setMoveMode,
-	setMoveSpeed,
-	rotateToView,
-	toggleAutoRotate,
-	setAutoRotate,
-	handleFaceClick,
-	setAxesVisibe,
-	addFrameTask,
-	removeFrameTask,
-} = useThreeScene();
-
-const toolContext: ToolContext = {
-	get renderer() {
-		return renderer.value;
-	},
-	get scene() {
-		return scene.value;
-	},
-	get camera() {
-		return camera.value;
-	},
-	get modelGroup() {
-		return modelGroup.value;
-	},
-	get controls() {
-		return controls.value;
-	},
-	get modelSize() {
-		return modelSize.value;
-	},
-	get moveSpeed() {
-		return moveSpeed.value;
-	},
-	get autoRotate() {
-		return autoRotate.value;
-	},
-	get meshes() {
-		return meshes.value;
-	},
-	get box() {
-		return box.value;
-	},
-	get sceneUserData() {
-		return sceneUserData.value;
-	},
-	setMoveMode,
-	setMoveSpeed,
-	rotateToView,
-	toggleAutoRotate,
-	setAutoRotate,
-	handleFaceClick,
-	setAxesVisibe,
-	addFrameTask,
-	removeFrameTask,
-};
+const three = useThreeScene();
+const { loading, loadProgress, sceneUserData, init, dispose } = three;
+const toolContext: ToolContext = reactive(three);
 
 const currentColor = ref('#ffffff');
 
@@ -122,7 +54,7 @@ function createDialogBinding(toolPrefix: string) {
 	watch(showDialog, (visible) => {
 		if (!visible && activeToolId.value) {
 			const restoreId = `${activeToolId.value}:restore`;
-			if (toolRegistry[restoreId]) {
+			if (resolveToolAction(restoreId)) {
 				handleToolAction(restoreId);
 			}
 			toolStore.deactivate(activeToolId.value);
@@ -133,6 +65,16 @@ function createDialogBinding(toolPrefix: string) {
 }
 
 const colorDialog = createDialogBinding('material-solid');
+
+// 工具激活时，用其声明的默认颜色初始化颜色选择器，保证选色器与实际应用色一致
+watch(
+	() => colorDialog.activeToolId.value,
+	(id) => {
+		const defaultColor = id ? definitionsById.get(id)?.defaultColor : undefined;
+		if (defaultColor) currentColor.value = defaultColor;
+	}
+);
+
 const sectionDialog = createDialogBinding('section-');
 const modelPropDialog = createDialogBinding('modelprop-overall');
 
@@ -142,7 +84,7 @@ const modelPropDialog = createDialogBinding('modelprop-overall');
 const handleColorChange = (color: string) => {
 	currentColor.value = color;
 	if (colorDialog.activeToolId.value) {
-		handleToolAction(colorDialog.activeToolId.value, color);
+		handleToolAction(`${colorDialog.activeToolId.value}:color`, color);
 	}
 };
 
@@ -150,7 +92,7 @@ const handleColorChange = (color: string) => {
  * handleToolAction - 统一处理工具动作
  */
 const handleToolAction = (action: string, payload?: any) => {
-	const handler = toolRegistry[action];
+	const handler = resolveToolAction(action);
 	if (handler) {
 		handler(toolContext, payload);
 	}
@@ -173,7 +115,7 @@ const handleRadialActivate = (id: string, activated: boolean) => {
 		handleToolAction(actionId);
 	} else {
 		const restoreId = `${actionId}:restore`;
-		if (toolRegistry[restoreId]) {
+		if (resolveToolAction(restoreId)) {
 			handleToolAction(restoreId);
 		}
 	}

@@ -3,30 +3,10 @@ import { ref, computed } from 'vue';
 import SvgIcon from '@/components/SvgIcon/index.vue';
 import { findItemById } from '@/utils/tree';
 import { useToolStore } from '@/stores/tool';
-
-/**
- * ToolItem - 工具栏菜单项数据结构
- *
- * @description 支持多级嵌套的树形菜单，叶子节点可触发工具动作
- */
-interface ToolItem {
-	/** 唯一标识符（如 'section-plane-x'） */
-	id: string;
-	/** 图标名称，对应 src/assets/svgs/ 下的文件名 */
-	icon: string;
-	/** 菜单项显示文本 */
-	label: string;
-	/** 是否为可切换激活状态的工具（点击后保持高亮） */
-	activatable?: boolean;
-	/** 子菜单项（存在则渲染为下一级菜单） */
-	children?: ToolItem[];
-	/** 是否显示颜色选择器（线框/纯色模式） */
-	color?: boolean;
-	/** 颜色选择器默认颜色 */
-	defaultColor?: string;
-	/** 共存组标识：同组工具效果可共存，不同组互斥。不设则默认互斥 */
-	group?: string;
-}
+import { resolveMenu } from '@/tools/registry';
+import { toolbarMenu } from '@/tools/menu.config';
+import { definitionsById } from '@/tools';
+import type { ToolItem } from '@/tools/types';
 
 /**
  * Emits - ToolBar 组件事件
@@ -41,97 +21,7 @@ const emit = defineEmits<{
 const activeStack = ref<string[]>([]);
 const toolStore = useToolStore();
 
-const tools: ToolItem[] = [
-	{
-		id: 'return-origin',
-		icon: 'home',
-		label: '返回原点',
-	},
-	{
-		id: 'rotate',
-		icon: 'rotate',
-		label: '旋转',
-		activatable: true,
-	},
-	{
-		id: 'modelprop',
-		icon: 'modelprop',
-		label: '模型属性',
-		children: [
-			{ id: 'modelprop-pointLineFace', icon: 'export', label: '点线面属性', activatable: true, group: 'modelprop' },
-			{ id: 'modelprop-entity', icon: 'export', label: '实体属性', activatable: true, group: 'modelprop' },
-			{ id: 'modelprop-overall', icon: 'export', label: '总属性', activatable: true, group: 'modelprop' },
-		],
-	},
-	{
-		id: 'axes',
-		icon: 'axes',
-		label: '坐标系',
-		activatable: true,
-	},
-	{
-		id: 'view',
-		icon: 'view',
-		label: '视角',
-		children: [
-			{ id: 'view-front', icon: 'view-front', label: '正视图', group: 'view' },
-			{ id: 'view-back', icon: 'view-back', label: '后视图', group: 'view' },
-			{ id: 'view-left', icon: 'view-left', label: '左视图', group: 'view' },
-			{ id: 'view-right', icon: 'view-right', label: '右视图', group: 'view' },
-			{ id: 'view-top', icon: 'view-top', label: '俯视图', group: 'view' },
-			{ id: 'view-bottom', icon: 'view-bottom', label: '仰视图', group: 'view' },
-		],
-	},
-	{
-		id: 'measure',
-		icon: 'measure',
-		label: '测量',
-		children: [
-			{ id: 'measure-distance', icon: 'measure', label: '距离测量', activatable: true, group: 'measure' },
-			{ id: 'measure-angle', icon: 'measure', label: '角度测量', activatable: true, group: 'measure' },
-			{ id: 'measure-area', icon: 'measure', label: '面积测量', activatable: true, group: 'measure' },
-		],
-	},
-	{
-		id: 'annotate',
-		icon: 'annotate',
-		label: '标注',
-		children: [
-			{ id: 'annotate-text', icon: 'annotate', label: '文字标注', activatable: true },
-			{ id: 'annotate-pin', icon: 'annotate', label: '图钉标注', activatable: true },
-		],
-	},
-	{
-		id: 'section',
-		icon: 'section',
-		label: '剖切',
-		children: [
-			{ id: 'section-plane', icon: 'section', label: '平面剖切', activatable: true, group: 'section' },
-			{ id: 'section-sphere', icon: 'section', label: '球形剖切', activatable: true, group: 'section' },
-		],
-	},
-	{
-		id: 'material',
-		icon: 'material',
-		label: '材质',
-		children: [
-			{ id: 'material-wireframe', icon: 'material', label: '线框模式', activatable: true, group: 'material' },
-			{ id: 'material-xray', icon: 'material', label: 'X光模式', activatable: true, group: 'material' },
-			{ id: 'material-normal', icon: 'material', label: '法线显示', activatable: true, group: 'material' },
-			{ id: 'material-solid', icon: 'material', label: '纯色显示', activatable: true, color: true, defaultColor: '#999999', group: 'material' },
-		],
-	},
-	{
-		id: 'export',
-		icon: 'export',
-		label: '导出',
-		children: [
-			{ id: 'export-screenshot', icon: 'export', label: '截图' },
-			{ id: 'export-glb', icon: 'export', label: '导出GLB' },
-			{ id: 'export-gltf', icon: 'export', label: '导出GLTF' },
-		],
-	},
-];
+const tools: ToolItem[] = resolveMenu(toolbarMenu, definitionsById);
 
 const currentItems = ref<ToolItem[]>(tools);
 const direction = ref<'forward' | 'backward'>('forward');
@@ -290,11 +180,7 @@ const handleSelect = (item: ToolItem) => {
 				}
 			}
 			toolStore.activate(item.id);
-			if (item.color) {
-				emit('tool-action', actionId, item.defaultColor ?? '#ffffff');
-			} else {
-				emit('tool-action', actionId);
-			}
+			emit('tool-action', actionId);
 		}
 	} else {
 		const actionId = getActionId(item.id);

@@ -77,3 +77,66 @@ export interface MeshUserData {
 	/** 模型三向尺寸 */
 	modelSize: [number, number, number];
 }
+
+/**
+ * ToolMenuMeta - 工具默认菜单元数据
+ *
+ * @description 工具在菜单中的默认展示与行为标记。菜单布局只引用工具 id，
+ * 展示元数据以此处为唯一来源，禁止跨菜单覆盖，保证同 id 全局一致
+ */
+export interface ToolMenuMeta {
+	/** SVG 图标名（对应 src/assets/svgs/ 下文件名） */
+	icon: string;
+	/** 菜单显示文本 */
+	label: string;
+	/** 是否为可切换激活状态的工具（点击后保持高亮） */
+	activatable?: boolean;
+	/** 共存组标识：同组工具效果可共存，不同组互斥。不设则默认互斥 */
+	group?: string;
+}
+
+/**
+ * ToolDefinition - 菜单工具定义（单一数据源）
+ *
+ * @description 一个菜单工具 = 一个定义对象，聚合菜单元数据、激活/恢复生命周期。
+ * 注册表由定义数组自动构建，`${id}:restore` 由 deactivate 自动派生。
+ * 仅描述"出现在菜单中的工具"；非菜单的自定义/传参动作见 {@link CustomAction}
+ */
+export interface ToolDefinition {
+	/** 工具动作 id */
+	id: string;
+	/** 菜单展示元数据（菜单工具的展示与行为标识唯一来源） */
+	menu: ToolMenuMeta;
+	/** 该工具的默认颜色（供颜色选择器等 UI 初始化；可选） */
+	defaultColor?: string;
+	/** 激活/执行处理器 */
+	activate: ToolHandler;
+	/** 关闭/恢复处理器；存在时自动注册 `${id}:restore` */
+	deactivate?: ToolHandler;
+}
+
+/**
+ * CustomAction - 自定义动作（非菜单、可传参）
+ *
+ * @description 不参与菜单渲染、由业务代码直接调用的动作，例如
+ * `section-plane:invert`、`section-plane:visible`、`move:setSpeed`。
+ * 与菜单工具彻底分离，独立注册到动作注册表
+ */
+export interface CustomAction {
+	/** 动作 id（业务调用标识） */
+	id: string;
+	/** 动作处理器（可接收 payload 传参） */
+	handler: ToolHandler;
+}
+
+/**
+ * ToolItem - 解析后的菜单项（供 ToolBar / RadialMenu 渲染）
+ *
+ * @description 展示元数据复用 {@link ToolMenuMeta}，额外携带子菜单
+ */
+export interface ToolItem extends ToolMenuMeta {
+	/** 唯一标识符（resolveToolAction 的动作 id） */
+	id: string;
+	/** 子菜单项 */
+	children?: ToolItem[];
+}

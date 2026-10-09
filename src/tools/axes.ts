@@ -1,4 +1,5 @@
-import type { ToolContext, ToolHandler } from './types';
+import type { ToolContext, ToolHandler, ToolDefinition } from './types';
+import { defineTool } from './registry';
 
 /**
  * showAxes - 显示坐标系
@@ -19,3 +20,7 @@ export const showAxes: ToolHandler = (ctx: ToolContext) => {
 export const hideAxes: ToolHandler = (ctx: ToolContext) => {
 	ctx.setAxesVisibe(false);
 };
+
+export const tools: ToolDefinition[] = [
+	defineTool({ id: 'axes', menu: { icon: 'axes', label: '坐标系', activatable: true }, activate: showAxes, deactivate: hideAxes }),
+];

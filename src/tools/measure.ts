@@ -1,4 +1,5 @@
-import type { ToolContext, ToolHandler } from './types';
+import type { ToolContext, ToolHandler, ToolDefinition } from './types';
+import { defineTool } from './registry';
 
 /**
  * measureDistance - 距离测量（待实现）
@@ -35,3 +36,9 @@ export const measureArea: ToolHandler = (ctx: ToolContext) => {
 	void ctx;
 	// TODO: 实现面积测量
 };
+
+export const tools: ToolDefinition[] = [
+	defineTool({ id: 'measure-distance', menu: { icon: 'measure', label: '距离测量', activatable: true, group: 'measure' }, activate: measureDistance }),
+	defineTool({ id: 'measure-angle', menu: { icon: 'measure', label: '角度测量', activatable: true, group: 'measure' }, activate: measureAngle }),
+	defineTool({ id: 'measure-area', menu: { icon: 'measure', label: '面积测量', activatable: true, group: 'measure' }, activate: measureArea }),
+];

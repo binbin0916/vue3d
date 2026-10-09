@@ -1,17 +1,18 @@
 # vue-3d
 
-基于 Vue 3 + Three.js 的 3D 模型在线查看器，采用策略模式的可扩展工具栏架构。
+基于 Vue 3 + Three.js 的 3D 模型在线查看器，采用「单一数据源工具定义 + Vite 自动发现」的可扩展工具栏架构。
 
 ## 功能特性
 
 - 加载并展示 `.glb` 格式 3D 模型，支持 PBR 材质渲染
 - TrackballControls 轨道控制（旋转、缩放、平移）
-- 材质切换（线框模式、纯色模式）+ 实时颜色选择器（HEX/RGB）
+- 材质切换（线框 / X光 / 法线 / 纯色）+ 实时颜色选择器（HEX/RGB）
 - 移动模式切换（轨道控制 / 平移拖拽）
 - 底部工具栏：多级菜单 + 面包屑导航 + 拖拽滚动 + 渐变遮罩
 - 径向菜单（RadialMenu）：右下角快捷设置菜单
 - 工具栏与径向菜单共享激活状态（Pinia Store）
-- 策略模式工具栏：创建 handler 文件 + 注册即可扩展新工具
+- 单一数据源工具定义 + Vite `import.meta.glob` 自动发现：新增文件即自动注册，无需手改注册表
+- 声明式菜单布局：菜单只引用工具 id，图标/文案由定义统一提供，保证同 id 在 ToolBar 与 RadialMenu 全局一致
 
 ## 技术栈
 
@@ -58,13 +59,17 @@ pnpm dev
 ### 工具调用流程
 
 ```
-用户点击菜单项（ToolBar 或 RadialMenu）
+工具定义（src/tools/*.ts）
+  ├─ `tools: ToolDefinition[]`   菜单工具（含 menu 元数据）
+  └─ `actions: CustomAction[]`   非菜单的自定义/传参动作
+    ↓  import.meta.glob 自动发现
+buildRegistry / buildActionRegistry 建立两套独立注册表
     ↓
-菜单组件通过 toolStore 切换激活状态
+menu.config.ts 声明布局 ──resolveMenu──▶ ToolItem 菜单树（ToolBar / RadialMenu）
     ↓
-ToolBar 触发 'tool-action' 事件
+用户点击菜单项（或业务直接调用动作）→ toolStore 切换激活状态
     ↓
-home.vue 通过 toolRegistry 分发
+触发 'tool-action' 事件 → home.vue 用 resolveToolAction 分发
     ↓
 handler 函数执行（操作 Three.js 场景）
 ```
@@ -76,17 +81,19 @@ src/
 ├── composables/
 │   └── useThreeScene.ts    # 3D 场景状态 + 生命周期管理
 ├── components/
-│   ├── ToolBar/            # 底部工具栏（多级菜单 + 面包屑 + 拖拽滚动 + 颜色选择器）
+│   ├── ToolBar/            # 底部工具栏（多级菜单 + 面包屑 + 拖拽滚动）
 │   ├── RadialMenu/         # 右下角径向设置菜单（与 ToolBar 共享激活状态）
 │   ├── ModelLoader/        # 模型加载遮罩层（进度条）
 │   └── SvgIcon/            # SVG 图标组件
 ├── stores/
 │   └── tool.ts             # 工具状态管理（Pinia Store，ToolBar + RadialMenu 共享）
-├── tools/                  # 工具处理器（策略模式）
-│   ├── types.ts            # ToolContext 接口 + ToolHandler 类型
-│   ├── index.ts            # action → handler 注册表
-│   ├── material.ts         # 材质工具（线框/纯色 + 颜色选择器）
-│   └── *.ts                # 每个功能一个文件
+├── tools/                  # 工具定义 + 注册（单一数据源 + 自动发现）
+│   ├── types.ts            # ToolContext / ToolDefinition / CustomAction / ToolItem 等类型
+│   ├── registry.ts         # defineTool / defineAction / buildRegistry / buildActionRegistry / resolveMenu
+│   ├── menu.config.ts      # 声明式菜单布局（toolbarMenu / radialMenu）
+│   ├── index.ts            # import.meta.glob 自动发现 + 构建两套注册表 + resolveToolAction
+│   ├── material.ts         # 材质工具（线框/X光/法线/纯色 + 颜色选择器）
+│   └── *.ts                # 每个功能一个文件，导出 tools 和/或 actions
 ├── three/                  # Three.js 模块化封装
 │   ├── renderer.ts         # WebGL 渲染器
 │   ├── scene.ts            # 场景创建
@@ -102,88 +109,134 @@ src/
 
 ToolBar 和 RadialMenu 通过 Pinia Store（`src/stores/tool.ts`）共享激活状态：
 
-- 两个菜单中相同功能的菜单项使用**相同的 ID**（如 `material-wireframe`）
+- 菜单布局（`menu.config.ts`）只引用工具 **id**，图标/文案等元数据由 `ToolDefinition.menu` 统一提供，**禁止跨菜单覆盖**，保证同 id 全局一致
 - 任一菜单激活/取消工具，另一个菜单自动同步高亮
-- 可切换工具必须提供 `:restore` 后缀的 handler 用于恢复原始状态
+- 可切换工具在定义中声明 `deactivate`，注册表自动派生 `${id}:restore` 用于恢复原始状态
+- 菜单只承载 `tools`；`section-plane:invert`、`move:setSpeed` 等非菜单自定义/传参动作归入 `actions`，不进入菜单树
 
 ### 新增工具
 
-**第 1 步：创建 handler 文件**
+**第 1 步：创建工具定义文件**
+
+在 `src/tools/` 下新增文件，导出 `tools: ToolDefinition[]`。`import.meta.glob` 会自动发现并注册，**无需手动修改注册表**。
 
 ```ts
 // src/tools/your-tool.ts
-import type { ToolContext, ToolHandler } from './types';
+import type { ToolContext, ToolHandler, ToolDefinition, CustomAction } from './types';
+import { defineTool, defineAction } from './registry';
 
 export const yourAction: ToolHandler = (ctx: ToolContext, payload?: string) => {
 	// 操作 ctx.scene、ctx.modelGroup 等
 };
-```
 
-**第 2 步：注册到 registry**
-
-```ts
-// src/tools/index.ts
-import { yourAction } from './your-tool';
-
-export const toolRegistry: Record<string, ToolHandler> = {
-	// ... 已有工具
-	'your-tool:action': yourAction,
-	'your-tool:action:restore': restoreHandler, // 可切换工具必须提供 restore
+// 可切换工具提供 deactivate，注册表自动派生 'your-tool:restore'
+export const restoreYourAction: ToolHandler = (ctx: ToolContext) => {
+	// 恢复原始状态
 };
+
+// ① 菜单工具：会渲染进 ToolBar / RadialMenu
+export const tools: ToolDefinition[] = [
+	defineTool({
+		id: 'your-tool',
+		menu: { icon: 'your-icon', label: '你的工具', activatable: true, group: 'your-group' },
+		activate: yourAction,
+		deactivate: restoreYourAction,
+	}),
+];
+
+// ② 自定义动作：不进菜单，由业务代码直接调用（可传参），独立注册
+export const actions: CustomAction[] = [defineAction({ id: 'your-tool:invert', handler: yourInvertHandler })];
 ```
 
-**第 3 步：添加菜单项**
+**第 2 步：在菜单布局中引用 id**
 
 ```ts
-// src/components/ToolBar/index.vue
-const tools: ToolItem[] = [
+// src/tools/menu.config.ts
+export const toolbarMenu: MenuNode[] = [
 	// ... 已有菜单
+	'your-tool', // 字符串形式直接引用工具 id
 	{
-		id: 'your-tool',
-		icon: 'your-icon', // 对应 src/assets/svgs/ 下的 SVG 文件名
-		label: '你的工具',
-		children: [{ id: 'your-tool:action', icon: 'your-icon', label: '操作', activatable: true }],
+		id: 'your-group',
+		icon: 'your-icon',
+		label: '你的分组',
+		children: ['your-tool'], // 分组内引用 id
 	},
 ];
 ```
 
 > [!NOTE]
-> 若需在 RadialMenu 中也显示此工具，需在 RadialMenu 的 `menuItems` 中添加**相同 ID** 的菜单项。
+> 若需在 RadialMenu 中也显示，同样在 `radialMenu` 中引用**相同 id** 即可（顺序与分组可不同）。菜单项的图标/文案始终取自工具定义，两个菜单天然一致。
 
-### ToolItem 接口
+> [!TIP]
+> 若菜单项暂无对应工具（供后续开发预留），可内联 `{ id, icon, label, activatable }` 作为**占位叶子**——它与工具 id 无关，点击不触发逻辑。
+
+### 工具定义类型
+
+菜单工具与自定义动作是**两套相互隔离的对象**，各自注册：
 
 ```ts
-interface ToolItem {
-	id: string; // 发送给 toolRegistry 的 action 标识
-	icon: string; // SVG 图标名
-	label: string; // 显示文本
-	activatable?: boolean; // 点击后是否高亮激活
-	children?: ToolItem[]; // 子菜单
-	color?: boolean; // 是否显示颜色选择器
-	defaultColor?: string; // 激活时的默认颜色
-	group?: string; // 同组工具可共存，不同组互斥
+// 菜单工具定义（单一数据源）——会渲染进菜单
+interface ToolDefinition {
+	id: string; // 工具动作 id
+	menu: ToolMenuMeta; // 菜单展示元数据（必填）
+	defaultColor?: string; // 工具默认颜色（供颜色选择器等 UI 初始化；可选）
+	activate: ToolHandler; // 激活/执行处理器
+	deactivate?: ToolHandler; // 关闭/恢复处理器；存在时自动派生 `${id}:restore`
+}
+
+// 自定义动作——不进菜单，由业务直接调用，可传参
+interface CustomAction {
+	id: string; // 动作 id（如 'section-plane:invert'、'move:setSpeed'）
+	handler: ToolHandler; // 动作处理器
+}
+
+// 菜单展示元数据（同 id 的全局唯一来源，禁止跨菜单覆盖）
+interface ToolMenuMeta {
+	icon: string; // SVG 图标名（src/assets/svgs/ 下文件名）
+	label: string; // 菜单显示文本
+	activatable?: boolean; // 点击后是否保持高亮
+	group?: string; // 同组可共存，不同组互斥
+}
+
+// 解析后的菜单项（供 ToolBar / RadialMenu 渲染）
+interface ToolItem extends ToolMenuMeta {
+	id: string;
+	children?: ToolItem[];
 }
 ```
 
 > [!NOTE]
 > 同一 `group` 的工具效果可同时生效（如线框 + X光），不同 `group` 的工具互斥（如线框 vs 纯色）。
 
+> [!IMPORTANT]
+> 菜单工具（`tools`）与自定义/传参动作（`actions`）彻底分离：前者经 `buildRegistry` 生成 `toolRegistry` 并参与菜单渲染；后者经 `buildActionRegistry` 生成 `actionRegistry`。`home.vue` 统一通过 `resolveToolAction(id)` 分发（先查 `toolRegistry`，再查 `actionRegistry`）。
+
 ### ToolContext
 
-所有工具处理器接收统一的上下文对象：
+所有工具处理器接收统一的上下文对象（`home.vue` 通过 `reactive(useThreeScene())` 自动注入，字段均为已解包的值）：
 
 ```ts
 interface ToolContext {
 	renderer: THREE.WebGLRenderer;
 	scene: THREE.Scene;
 	camera: THREE.PerspectiveCamera;
-	modelGroup: THREE.Object3D;
+	modelGroup: THREE.Object3D; // 模型根组（已旋转 45°）
 	controls: TrackballControls;
-	modelSize: number;
-	isMoveMode: boolean;
-	moveSpeed: number;
+	modelSize: number; // 模型包围盒最大边长
+	moveSpeed: number; // 移动速度倍率
+	meshes: THREE.Mesh[]; // 模型中所有 Mesh 的扁平数组
+	box: THREE.Box3; // model 包围盒
+	sceneUserData: GLBSceneUserData; // 模型总属性
 	setMoveMode: (enabled: boolean) => void;
 	setMoveSpeed: (speed: number) => void;
+	rotateToView: (targetPosition: THREE.Vector3, targetUp: THREE.Vector3, duration?: number) => void;
+	autoRotate: boolean;
+	toggleAutoRotate: () => void;
+	setAutoRotate: (enabled: boolean) => void;
+	handleFaceClick: (meshname: string) => void;
+	setAxesVisibe: (enabled: boolean) => void;
+	addFrameTask: (id: string, task: FrameTask) => void;
+	removeFrameTask: (id: string) => void;
 }
 ```
 
@@ -192,6 +245,7 @@ interface ToolContext {
 ### 拖拽滚动
 
 工具栏内容溢出时支持鼠标拖拽滚动：
+
 - 按住拖拽：工具栏跟随鼠标移动
 - 松开后：惯性滚动（逐渐减速）
 - 拖拽距离 > 5px 时阻止点击事件，避免误触菜单
@@ -204,10 +258,12 @@ interface ToolContext {
 
 ### 颜色选择器
 
-材质工具（线框/纯色）激活时显示颜色选择器：
+纯色工具（`material-solid`）激活时显示颜色选择器：
+
 - 色盘选择 + HEX/RGB 模式切换
 - 文本输入框支持手动输入颜色值
-- 实时预览：选色后立即应用到模型
+- 实时预览：选色后通过 `material-solid:color` 自定义动作立即应用到模型
+- 初始颜色取自工具定义声明的 `defaultColor`，与实际应用色一致
 
 ## 代码规范
 
@@ -221,4 +277,4 @@ interface ToolContext {
 
 ## 模型文件
 
-将 `.glb` 文件放置在 `public/model/get/` 目录下，默认加载路径为 `/model/get/export_convert_323248_151.glb`。
+将 `.glb` 文件放置在 `public/model/get/` 目录下。页面通过 `<script id="code" data-code="...">` 读取模型编码，加载路径为 `/model/get/<code>.glb`。

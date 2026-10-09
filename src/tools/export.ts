@@ -1,4 +1,5 @@
-import type { ToolContext, ToolHandler } from './types';
+import type { ToolContext, ToolHandler, ToolDefinition } from './types';
+import { defineTool } from './registry';
 
 /**
  * exportScreenshot - 截图导出（待实现）
@@ -35,3 +36,9 @@ export const exportGltf: ToolHandler = (ctx: ToolContext) => {
 	void ctx;
 	// TODO: 实现 GLTF 导出
 };
+
+export const tools: ToolDefinition[] = [
+	defineTool({ id: 'export-screenshot', menu: { icon: 'export', label: '截图' }, activate: exportScreenshot }),
+	defineTool({ id: 'export-glb', menu: { icon: 'export', label: '导出GLB' }, activate: exportGlb }),
+	defineTool({ id: 'export-gltf', menu: { icon: 'export', label: '导出GLTF' }, activate: exportGltf }),
+];

@@ -43,18 +43,15 @@ export default defineConfig({
 		port: 3000,
 	},
 	build: {
-		chunkSizeWarningLimit: 1000, // 阈值调高到 1MB（可选）
+		chunkSizeWarningLimit: 1000,
 		rollupOptions: {
 			output: {
 				manualChunks(id) {
 					if (id.includes('node_modules')) {
-						// Three.js 单独一个 chunk
 						if (id.includes('three')) return 'three';
-						// Vue 生态单独一个
 						if (id.includes('vue') || id.includes('pinia') || id.includes('vue-router')) {
 							return 'vue-vendor';
 						}
-						// 其余第三方
 						return 'vendor';
 					}
 				},

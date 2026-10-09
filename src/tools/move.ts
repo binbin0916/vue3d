@@ -1,4 +1,5 @@
-import type { ToolContext, ToolHandler } from './types';
+import type { ToolContext, ToolHandler, CustomAction } from './types';
+import { defineAction } from './registry';
 
 /**
  * setMoveSpeed - 设置移动速度
@@ -11,3 +12,6 @@ import type { ToolContext, ToolHandler } from './types';
 export const setMoveSpeed: ToolHandler = (ctx: ToolContext, payload?: number) => {
 	ctx.setMoveSpeed(payload ?? 1);
 };
+
+/** 非菜单的自定义动作（由业务代码直接调用） */
+export const actions: CustomAction[] = [defineAction({ id: 'move:setSpeed', handler: setMoveSpeed })];

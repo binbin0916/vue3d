@@ -1,80 +1,53 @@
-import type { ToolHandler } from './types';
-import { setMoveSpeed } from './move';
-import { viewFront, viewBack, viewLeft, viewRight, viewTop, viewBottom, viewOrigin, viewRotate, resetViewRotate } from './view';
-import { measureDistance, measureAngle, measureArea } from './measure';
-import { annotateText, annotatePin } from './annotate';
-import { showAxes, hideAxes } from './axes';
-import { sectionPlane, sectionSphere, sectionReset, sectionResetPosition, sectionInvert, sectionVisible } from './section';
-import { materialWireframe, materialXray, materialNormal, materialSolid, restoreMaterial } from './material';
-import { exportScreenshot, exportGlb, exportGltf } from './export';
-import { getPointLineFace, getEntity, getOverall } from './model';
+import type { ToolDefinition, CustomAction, ToolHandler } from './types';
+import { buildRegistry, buildActionRegistry } from './registry';
 
 /**
- * toolRegistry - 工具动作注册表
+ * 自动发现所有工具定义文件
  *
- * @description 将 ToolBar 发出的 action 字符串映射到对应的处理器函数。
- * 新增工具时只需：1) 创建处理器文件  2) 在此注册
+ * @description 每个工具文件可导出：
+ * - `tools: ToolDefinition[]` —— 参与菜单渲染的菜单工具
+ * - `actions: CustomAction[]` —— 非菜单的自定义/传参动作
+ * 新增文件即自动注册，无需手动维护注册表
  */
-export const toolRegistry: Record<string, ToolHandler> = {
-	// 返回原点
-	'return-origin': viewOrigin,
-	// 移动
-	'move:setSpeed': setMoveSpeed,
+const modules = import.meta.glob<{ tools?: ToolDefinition[]; actions?: CustomAction[] }>(['./*.ts', '!./index.ts', '!./types.ts', '!./registry.ts', '!./menu.config.ts'], {
+	eager: true,
+});
 
-	// 旋转
-	rotate: viewRotate,
-	'rotate:restore': resetViewRotate,
+/**
+ * toolDefinitions - 全部菜单工具定义（按文件路径顺序扁平化）
+ */
+export const toolDefinitions: ToolDefinition[] = Object.values(modules).flatMap((mod) => mod.tools ?? []);
 
-	// 坐标系
-	axes: showAxes,
-	'axes:restore': hideAxes,
+/**
+ * customActions - 全部自定义/传参动作（非菜单）
+ */
+export const customActions: CustomAction[] = Object.values(modules).flatMap((mod) => mod.actions ?? []);
 
-	// 视角
-	'view-front': viewFront,
-	'view-back': viewBack,
-	'view-left': viewLeft,
-	'view-right': viewRight,
-	'view-top': viewTop,
-	'view-bottom': viewBottom,
+/**
+ * definitionsById - 工具 id → 定义索引（供菜单解析）
+ */
+export const definitionsById = new Map(toolDefinitions.map((def) => [def.id, def]));
 
-	// 测量
-	'measure-distance': measureDistance,
-	'measure-angle': measureAngle,
-	'measure-area': measureArea,
+/**
+ * toolRegistry - 菜单工具动作注册表（由定义自动构建，含 `${id}:restore`）
+ */
+export const toolRegistry = buildRegistry(toolDefinitions);
 
-	// 标注
-	'annotate-text': annotateText,
-	'annotate-pin': annotatePin,
+/**
+ * actionRegistry - 自定义/传参动作注册表
+ */
+export const actionRegistry = buildActionRegistry(customActions);
 
-	// 剖切
-	'section-plane': sectionPlane,
-	'section-plane:restore': sectionReset,
-	'section-sphere': sectionSphere,
-	'section-sphere:restore': sectionReset,
-	'section-plane:invert': sectionInvert,
-	'section-plane:visible': sectionVisible,
-	'section-plane:reset': sectionResetPosition,
-
-	// 材质
-	'material-wireframe': materialWireframe,
-	'material-wireframe:restore': restoreMaterial,
-	'material-xray': materialXray,
-	'material-xray:restore': restoreMaterial,
-	'material-normal': materialNormal,
-	'material-normal:restore': restoreMaterial,
-	'material-solid': materialSolid,
-	'material-solid:restore': restoreMaterial,
-	'material:restore': restoreMaterial,
-
-	// 导出
-	'export-screenshot': exportScreenshot,
-	'export-glb': exportGlb,
-	'export-gltf': exportGltf,
-
-	// 模型属性
-	'modelprop-pointLineFace': getPointLineFace, // 点线面属性
-	'modelprop-entity': getEntity, // 实体属性
-	'modelprop-overall': getOverall, // 总属性
-};
+/**
+ * resolveToolAction - 统一解析动作处理器
+ *
+ * @description 依次在菜单工具注册表、自定义动作注册表中查找，供 home.vue 统一分发
+ *
+ * @param {string} action - 动作 id
+ * @returns {ToolHandler | undefined} 命中的处理器
+ */
+export function resolveToolAction(action: string): ToolHandler | undefined {
+	return toolRegistry[action] ?? actionRegistry[action];
+}
 
 export type { ToolContext, ToolHandler } from './types';
