@@ -237,7 +237,7 @@ const initControls = (ctx: ToolContext) => {
 	control.addEventListener('dragging-changed', (event) => {
 		ctx.controls.enabled = !event.value;
 	});
-	control.addEventListener('change', () => { });
+	control.addEventListener('change', () => {});
 };
 
 const disposeControls = (ctx: ToolContext) => {
@@ -631,13 +631,13 @@ const updateStencilPolygonPositions = () => {
 export const tools: ToolDefinition[] = [
 	defineTool({
 		id: 'section-plane',
-		menu: { icon: 'section', label: '平面剖切', activatable: true, group: 'section' },
+		menu: { icon: 'icon-knife', label: '平面剖切', activatable: true, group: 'section' },
 		activate: sectionPlane,
 		deactivate: sectionReset,
 	}),
 	defineTool({
 		id: 'section-sphere',
-		menu: { icon: 'section', label: '球形剖切', activatable: true, group: 'section' },
+		menu: { icon: 'icon-region', label: '球形剖切', activatable: true, group: 'section' },
 		activate: sectionSphere,
 		deactivate: sectionReset,
 	}),

@@ -42,6 +42,7 @@ export function useThreeScene() {
 	const controls = shallowRef<TrackballControls>({} as TrackballControls);
 	const axes = shallowRef<THREE.AxesHelper>({} as THREE.AxesHelper);
 	const meshes = ref<THREE.Mesh[]>([]);
+	const lines = ref<THREE.LineSegments[]>([]);
 	const box = shallowRef<THREE.Box3>({} as THREE.Box3);
 	const autoRotate = ref(false);
 	const sceneUserData = ref<GLBSceneUserData>({} as GLBSceneUserData);
@@ -375,6 +376,7 @@ export function useThreeScene() {
 			modelSize.value = result.modelSize;
 			axes.value = result.axes;
 			meshes.value = result.meshes;
+			lines.value = result.lines;
 			box.value = result.box;
 			sceneUserData.value = result.sceneUserData;
 			scene.value.add(modelGroup.value);
@@ -488,6 +490,7 @@ export function useThreeScene() {
 		moveSpeed,
 		autoRotate,
 		meshes,
+		lines,
 		box,
 		sceneUserData,
 		setMoveMode,

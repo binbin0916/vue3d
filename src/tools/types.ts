@@ -25,6 +25,8 @@ export interface ToolContext {
 	moveSpeed: number;
 	/** 模型中所有 Mesh 对象的扁平数组 */
 	meshes: THREE.Mesh[];
+	/** 模型中所有 Mesh 对象的扁平数组 */
+	lines: THREE.LineSegments[];
 	/** model 包围盒 */
 	box: THREE.Box3;
 	/** 模型总属性 */
@@ -85,7 +87,7 @@ export interface MeshUserData {
  * 展示元数据以此处为唯一来源，禁止跨菜单覆盖，保证同 id 全局一致
  */
 export interface ToolMenuMeta {
-	/** SVG 图标名（对应 src/assets/svgs/ 下文件名） */
+	/** 图标名：以 'icon-' 开头使用 iconfont 字体（public/iconfont），否则使用 SVG sprite（src/assets/svgs/） */
 	icon: string;
 	/** 菜单显示文本 */
 	label: string;

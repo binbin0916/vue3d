@@ -38,7 +38,7 @@ export const exportGltf: ToolHandler = (ctx: ToolContext) => {
 };
 
 export const tools: ToolDefinition[] = [
-	defineTool({ id: 'export-screenshot', menu: { icon: 'export', label: '截图' }, activate: exportScreenshot }),
-	defineTool({ id: 'export-glb', menu: { icon: 'export', label: '导出GLB' }, activate: exportGlb }),
-	defineTool({ id: 'export-gltf', menu: { icon: 'export', label: '导出GLTF' }, activate: exportGltf }),
+	defineTool({ id: 'export-screenshot', menu: { icon: 'icon-screenshot', label: '截图' }, activate: exportScreenshot }),
+	defineTool({ id: 'export-glb', menu: { icon: 'icon-down', label: '导出GLB' }, activate: exportGlb }),
+	defineTool({ id: 'export-gltf', menu: { icon: 'icon-downplugin', label: '导出GLTF' }, activate: exportGltf }),
 ];

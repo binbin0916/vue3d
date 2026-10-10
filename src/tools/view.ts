@@ -66,12 +66,12 @@ export const viewRotate: ToolHandler = (ctx) => setViewAngle(ctx, 'rotate');
 export const resetViewRotate: ToolHandler = (ctx) => setViewAngle(ctx, 'rotate:reset');
 
 export const tools: ToolDefinition[] = [
-	defineTool({ id: 'return-origin', menu: { icon: 'home', label: '返回原点' }, activate: viewOrigin }),
-	defineTool({ id: 'view-front', menu: { icon: 'view-front', label: '正视图', group: 'view' }, activate: viewFront }),
-	defineTool({ id: 'view-back', menu: { icon: 'view-back', label: '后视图', group: 'view' }, activate: viewBack }),
-	defineTool({ id: 'view-left', menu: { icon: 'view-left', label: '左视图', group: 'view' }, activate: viewLeft }),
-	defineTool({ id: 'view-right', menu: { icon: 'view-right', label: '右视图', group: 'view' }, activate: viewRight }),
-	defineTool({ id: 'view-top', menu: { icon: 'view-top', label: '俯视图', group: 'view' }, activate: viewTop }),
-	defineTool({ id: 'view-bottom', menu: { icon: 'view-bottom', label: '仰视图', group: 'view' }, activate: viewBottom }),
-	defineTool({ id: 'rotate', menu: { icon: 'rotate', label: '旋转', activatable: true }, activate: viewRotate, deactivate: resetViewRotate }),
+	defineTool({ id: 'return-origin', menu: { icon: 'icon-home', label: '返回原点' }, activate: viewOrigin }),
+	defineTool({ id: 'view-front', menu: { icon: 'icon-frontView', label: '正视图', group: 'view' }, activate: viewFront }),
+	defineTool({ id: 'view-back', menu: { icon: 'icon-backView', label: '后视图', group: 'view' }, activate: viewBack }),
+	defineTool({ id: 'view-left', menu: { icon: 'icon-leftView', label: '左视图', group: 'view' }, activate: viewLeft }),
+	defineTool({ id: 'view-right', menu: { icon: 'icon-rightView', label: '右视图', group: 'view' }, activate: viewRight }),
+	defineTool({ id: 'view-top', menu: { icon: 'icon-topView', label: '俯视图', group: 'view' }, activate: viewTop }),
+	defineTool({ id: 'view-bottom', menu: { icon: 'icon-bottomView', label: '仰视图', group: 'view' }, activate: viewBottom }),
+	defineTool({ id: 'rotate', menu: { icon: 'icon-xuanzhuan', label: '旋转', activatable: true }, activate: viewRotate, deactivate: resetViewRotate }),
 ];

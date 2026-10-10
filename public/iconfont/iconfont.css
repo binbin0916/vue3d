@@ -1,0 +1,830 @@
+/*
+ * iconfont - 自动由 public/iconfont/iconfont.ttf 解析生成 (post 2.0 字形名 + cmap Unicode)
+ * 共 202 个图标
+ * 请勿手动编辑；如需更新，重新生成即可
+ */
+
+@font-face {
+	font-family: 'iconfont';
+	src: url('iconfont.woff2') format('woff2'), url('iconfont.woff') format('woff'), url('iconfont.ttf') format('truetype');
+	font-weight: normal;
+	font-style: normal;
+	font-display: block;
+}
+
+.iconfont {
+	font-family: 'iconfont' !important;
+	font-size: 16px;
+	font-style: normal;
+	line-height: 1;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+.icon-faceClipper:before {
+	content: "\e601";
+}
+
+.icon-checkbox:before {
+	content: "\e602";
+}
+
+.icon-search:before {
+	content: "\e603";
+}
+
+.icon-bBox1:before {
+	content: "\e604";
+}
+
+.icon-expand:before {
+	content: "\e605";
+}
+
+.icon-fuzhibeifen:before {
+	content: "\e606";
+}
+
+.icon-check:before {
+	content: "\e607";
+}
+
+.icon-qingxuanze:before {
+	content: "\e608";
+}
+
+.icon-part:before {
+	content: "\e609";
+}
+
+.icon-collapse:before {
+	content: "\e60a";
+}
+
+.icon-checkAnnotationType:before {
+	content: "\e60b";
+}
+
+.icon-annotationReupload:before {
+	content: "\e60c";
+}
+
+.icon-annotationModal:before {
+	content: "\e60d";
+}
+
+.icon-annotationList:before {
+	content: "\e60e";
+}
+
+.icon-other:before {
+	content: "\e60f";
+}
+
+.icon-scaleArrow:before {
+	content: "\e610";
+}
+
+.icon-menu:before {
+	content: "\e611";
+}
+
+.icon-backView:before {
+	content: "\e612";
+}
+
+.icon-topView:before {
+	content: "\e613";
+}
+
+.icon-area:before {
+	content: "\e614";
+}
+
+.icon-line_face:before {
+	content: "\e615";
+}
+
+.icon-length:before {
+	content: "\e616";
+}
+
+.icon-perimeter:before {
+	content: "\e617";
+}
+
+.icon-xuanzhuan:before {
+	content: "\e618";
+}
+
+.icon-axis:before {
+	content: "\e619";
+}
+
+.icon-round_round:before {
+	content: "\e61a";
+}
+
+.icon-save:before {
+	content: "\e61b";
+}
+
+.icon-ai_measure:before {
+	content: "\e61c";
+}
+
+.icon-zhinengjiance:before {
+	content: "\e61d";
+}
+
+.icon-fullscreen:before {
+	content: "\e61e";
+}
+
+.icon-rightView:before {
+	content: "\e61f";
+}
+
+.icon-line_angle:before {
+	content: "\e620";
+}
+
+.icon-line_face_angle:before {
+	content: "\e621";
+}
+
+.icon-noOutline:before {
+	content: "\e622";
+}
+
+.icon-line_line:before {
+	content: "\e623";
+}
+
+.icon-dibucaidanicon_yincang:before {
+	content: "\e624";
+}
+
+.icon-clear:before {
+	content: "\e625";
+}
+
+.icon-line_perimeter:before {
+	content: "\e626";
+}
+
+.icon-fullscreen_out:before {
+	content: "\e627";
+}
+
+.icon-volume:before {
+	content: "\e628";
+}
+
+.icon-shadow:before {
+	content: "\e629";
+}
+
+.icon-transparent:before {
+	content: "\e62a";
+}
+
+.icon-frontView:before {
+	content: "\e62b";
+}
+
+.icon-move:before {
+	content: "\e62c";
+}
+
+.icon-scaleArrow2:before {
+	content: "\e62d";
+}
+
+.icon-screenshot:before {
+	content: "\e62e";
+}
+
+.icon-parting:before {
+	content: "\e62f";
+}
+
+.icon-face_face:before {
+	content: "\e630";
+}
+
+.icon-distance:before {
+	content: "\e631";
+}
+
+.icon-hole_point:before {
+	content: "\e632";
+}
+
+.icon-face_angle:before {
+	content: "\e633";
+}
+
+.icon-hole_face:before {
+	content: "\e634";
+}
+
+.icon-structureTree:before {
+	content: "\e635";
+}
+
+.icon-angle:before {
+	content: "\e636";
+}
+
+.icon-moxingjibenxinxi:before {
+	content: "\e637";
+}
+
+.icon-annotation:before {
+	content: "\e638";
+}
+
+.icon-hole_line:before {
+	content: "\e639";
+}
+
+.icon-back:before {
+	content: "\e63a";
+}
+
+.icon-modelSplit:before {
+	content: "\e63b";
+}
+
+.icon-point_point:before {
+	content: "\e63c";
+}
+
+.icon-mesh:before {
+	content: "\e63d";
+}
+
+.icon-changeBackground:before {
+	content: "\e63e";
+}
+
+.icon-toolPath:before {
+	content: "\e63f";
+}
+
+.icon-bottomView:before {
+	content: "\e640";
+}
+
+.icon-home:before {
+	content: "\e641";
+}
+
+.icon-zoomOut:before {
+	content: "\e642";
+}
+
+.icon-baobijiance:before {
+	content: "\e643";
+}
+
+.icon-point_line:before {
+	content: "\e644";
+}
+
+.icon-point_face:before {
+	content: "\e645";
+}
+
+.icon-boundingBox:before {
+	content: "\e646";
+}
+
+.icon-arc:before {
+	content: "\e647";
+}
+
+.icon-measure:before {
+	content: "\e648";
+}
+
+.icon-help:before {
+	content: "\e649";
+}
+
+.icon-wireframe:before {
+	content: "\e64a";
+}
+
+.icon-close:before {
+	content: "\e64b";
+}
+
+.icon-eyeclose-filled:before {
+	content: "\e64c";
+}
+
+.icon-close-play:before {
+	content: "\e64d";
+}
+
+.icon-speed:before {
+	content: "\e64e";
+}
+
+.icon-chromatography:before {
+	content: "\e64f";
+}
+
+.icon-start:before {
+	content: "\e650";
+}
+
+.icon-stop:before {
+	content: "\e651";
+}
+
+.icon-xiala:before {
+	content: "\e652";
+}
+
+.icon-bianji:before {
+	content: "\e653";
+}
+
+.icon-close-play1:before {
+	content: "\e654";
+}
+
+.icon-model:before {
+	content: "\e655";
+}
+
+.icon-leftView:before {
+	content: "\e656";
+}
+
+.icon-knife:before {
+	content: "\e657";
+}
+
+.icon-setting:before {
+	content: "\e658";
+}
+
+.icon-offset:before {
+	content: "\e659";
+}
+
+.icon-arrow_down:before {
+	content: "\e65a";
+}
+
+.icon-zoomIn:before {
+	content: "\e65b";
+}
+
+.icon-developedSize:before {
+	content: "\e65c";
+}
+
+.icon-annotation-icon:before {
+	content: "\e65d";
+}
+
+.icon-annotation-e65e:before {
+	content: "\e65e";
+}
+
+.icon-equidistant:before {
+	content: "\e65f";
+}
+
+.icon-color:before {
+	content: "\e660";
+}
+
+.icon-play:before {
+	content: "\e661";
+}
+
+.icon-info:before {
+	content: "\e662";
+}
+
+.icon-overlay:before {
+	content: "\e663";
+}
+
+.icon-align:before {
+	content: "\e664";
+}
+
+.icon-arrow_up:before {
+	content: "\e665";
+}
+
+.icon-eye:before {
+	content: "\e666";
+}
+
+.icon-clear2:before {
+	content: "\e667";
+}
+
+.icon-directionView:before {
+	content: "\e668";
+}
+
+.icon-pmi:before {
+	content: "\e669";
+}
+
+.icon-authentication_failed:before {
+	content: "\e66a";
+}
+
+.icon-more:before {
+	content: "\e66b";
+}
+
+.icon-pmi-e66c:before {
+	content: "\e66c";
+}
+
+.icon-drag:before {
+	content: "\e66d";
+}
+
+.icon-ratio:before {
+	content: "\e66e";
+}
+
+.icon-singleDrag:before {
+	content: "\e66f";
+}
+
+.icon-singleRestore:before {
+	content: "\e670";
+}
+
+.icon-allRestore:before {
+	content: "\e671";
+}
+
+.icon-moreBtn:before {
+	content: "\e672";
+}
+
+.icon-continue_distance:before {
+	content: "\e673";
+}
+
+.icon-refresh:before {
+	content: "\e674";
+}
+
+.icon-remnant:before {
+	content: "\e675";
+}
+
+.icon-overcut:before {
+	content: "\e676";
+}
+
+.icon-subArrow:before {
+	content: "\e677";
+}
+
+.icon-weld:before {
+	content: "\e678";
+}
+
+.icon-weld_select:before {
+	content: "\e679";
+}
+
+.icon-hole_threaded:before {
+	content: "\e67a";
+}
+
+.icon-edit:before {
+	content: "\e67b";
+}
+
+.icon-weld_delete:before {
+	content: "\e67c";
+}
+
+.icon-weld_clear:before {
+	content: "\e67d";
+}
+
+.icon-attention:before {
+	content: "\e67e";
+}
+
+.icon-weld_add:before {
+	content: "\e67f";
+}
+
+.icon-mesh_attribute:before {
+	content: "\e680";
+}
+
+.icon-entity_attribute:before {
+	content: "\e681";
+}
+
+.icon-model_attribute:before {
+	content: "\e682";
+}
+
+.icon-total_attribute:before {
+	content: "\e683";
+}
+
+.icon-pick_up:before {
+	content: "\e684";
+}
+
+.icon-addWeld:before {
+	content: "\e685";
+}
+
+.icon-hideSinglePart:before {
+	content: "\e686";
+}
+
+.icon-showWeld:before {
+	content: "\e687";
+}
+
+.icon-addSpecialFitting:before {
+	content: "\e688";
+}
+
+.icon-specialFitting:before {
+	content: "\e689";
+}
+
+.icon-fitting_edit:before {
+	content: "\e68a";
+}
+
+.icon-featureCompare:before {
+	content: "\e68b";
+}
+
+.icon-region:before {
+	content: "\e68c";
+}
+
+.icon-originCompare:before {
+	content: "\e68d";
+}
+
+.icon-warn:before {
+	content: "\e68e";
+}
+
+.icon-featureCompare-e68f:before {
+	content: "\e68f";
+}
+
+.icon-projectFeature:before {
+	content: "\e690";
+}
+
+.icon-layer:before {
+	content: "\e691";
+}
+
+.icon-downplugin:before {
+	content: "\e692";
+}
+
+.icon-down:before {
+	content: "\e693";
+}
+
+.icon-modelCenter:before {
+	content: "\e694";
+}
+
+.icon-dropdown:before {
+	content: "\e695";
+}
+
+.icon-resetAngle:before {
+	content: "\e696";
+}
+
+.icon-resetModel:before {
+	content: "\e697";
+}
+
+.icon-reverse:before {
+	content: "\e698";
+}
+
+.icon-basic_info:before {
+	content: "\e699";
+}
+
+.icon-shareBtn:before {
+	content: "\e69a";
+}
+
+.icon-viewer3d:before {
+	content: "\e69b";
+}
+
+.icon-singlePart:before {
+	content: "\e69c";
+}
+
+.icon-annotationIcon:before {
+	content: "\e69d";
+}
+
+.icon-faceMarkIcon:before {
+	content: "\e69e";
+}
+
+.icon-singlePartIcon:before {
+	content: "\e69f";
+}
+
+.icon-showSwitch:before {
+	content: "\e6a0";
+}
+
+.icon-faceMark:before {
+	content: "\e6a1";
+}
+
+.icon-onlyLine:before {
+	content: "\e6a2";
+}
+
+.icon-total_area:before {
+	content: "\e6a3";
+}
+
+.icon-specific_face:before {
+	content: "\e6a4";
+}
+
+.icon-specific_mesh:before {
+	content: "\e6a5";
+}
+
+.icon-total_volume:before {
+	content: "\e6a6";
+}
+
+.icon-treeExpand:before {
+	content: "\e6a7";
+}
+
+.icon-treeHide:before {
+	content: "\e6a8";
+}
+
+.icon-quanbuxianshibeifen:before {
+	content: "\e6a9";
+}
+
+.icon-mobileArrow:before {
+	content: "\e6aa";
+}
+
+.icon-dibucaidanicon_yincang-e6ab:before {
+	content: "\e6ab";
+}
+
+.icon-toumingbeifen:before {
+	content: "\e6ac";
+}
+
+.icon-toumingqitabeifen:before {
+	content: "\e6ad";
+}
+
+.icon-yincangqitabeifen:before {
+	content: "\e6ae";
+}
+
+.icon-xianshi_yincang:before {
+	content: "\e6af";
+}
+
+.icon-share_guoji:before {
+	content: "\e6b0";
+}
+
+.icon-moxingxiaoguo:before {
+	content: "\e6b1";
+}
+
+.icon-modelMerge:before {
+	content: "\e6b2";
+}
+
+.icon-faceFitting:before {
+	content: "\e6b3";
+}
+
+.icon-modelMerge-e6b4:before {
+	content: "\e6b4";
+}
+
+.icon-jubufangda:before {
+	content: "\e6b5";
+}
+
+.icon-bihou:before {
+	content: "\e6b6";
+}
+
+.icon-mobilexiazai:before {
+	content: "\e6b7";
+}
+
+.icon-share:before {
+	content: "\e729";
+}
+
+.icon-showAnnotation:before {
+	content: "\e77f";
+}
+
+.icon-delete:before {
+	content: "\e7c3";
+}
+
+.icon-dianji:before {
+	content: "\e83e";
+}
+
+.icon-close-eye:before {
+	content: "\eb46";
+}
+
+.icon-annotation-eb47:before {
+	content: "\eb47";
+}
+
+.icon-feature_infos:before {
+	content: "\e6795";
+}
+
+.icon-showWeld-e6796:before {
+	content: "\e6796";
+}
+
+.icon-hideSinglePart-e6797:before {
+	content: "\e6797";
+}
+
+.icon-specialFitting-e6798:before {
+	content: "\e6798";
+}
+
+.icon-addSpecialFitting-e6799:before {
+	content: "\e6799";
+}
+
+.icon-showWeld-e679a:before {
+	content: "\e679a";
+}
+
+.icon-hideSinglePart-e679b:before {
+	content: "\e679b";
+}
+
+.icon-showWeld-e679e:before {
+	content: "\e679e";
+}
+
+.icon-hideSinglePart-e679f:before {
+	content: "\e679f";
+}
+
+.icon-showWeld-e67a0:before {
+	content: "\e67a0";
+}
+
+.icon-hideSinglePart-e67a1:before {
+	content: "\e67a1";
+}
+
+.icon-addSpecialFitting-e67a2:before {
+	content: "\e67a2";
+}
+
+.icon-faceMark-e67a3:before {
+	content: "\e67a3";
+}

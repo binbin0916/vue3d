@@ -23,8 +23,10 @@ const TARGET_SIZE = 63;
 export interface ModelResult {
 	/** GLTF 场景根节点（已居中、已归一化缩放到 TARGET_SIZE） */
 	scene: THREE.Object3D;
-	/** 场景中所有 Mesh 对象的扁平数组 */
+	/** 模型中所有 Mesh 对象的扁平数组 */
 	meshes: THREE.Mesh[];
+	/** 模型中所有 LineSegments 对象的扁平数组 */
+	lines: THREE.LineSegments[];
 	/** 包裹场景的父级 Object3D，已设置旋转角度（PI/4, -PI/4, PI/4） */
 	group: THREE.Object3D;
 	/** 归一化后包围盒最大边长（≈ TARGET_SIZE），用于灯光、相机、控制器的尺寸基准 */
@@ -74,6 +76,7 @@ export function loadModel(url: string, onProgress?: (_progress: LoadProgress) =>
 			(gltf) => {
 				const scene = gltf.scene;
 				const meshes: THREE.Mesh[] = [];
+				const lines: THREE.LineSegments[] = [];
 
 				scene.traverse((obj: any) => {
 					if (obj.isMesh && obj.type === 'Mesh') {
@@ -106,6 +109,8 @@ export function loadModel(url: string, onProgress?: (_progress: LoadProgress) =>
 						obj.receiveShadow = true;
 
 						meshes.push(obj);
+					} else if (obj.isLineSegments && obj.isLine && obj.type === 'LineSegments') {
+						lines.push(obj);
 					}
 				});
 				scene.renderOrder = 0;
@@ -157,7 +162,7 @@ export function loadModel(url: string, onProgress?: (_progress: LoadProgress) =>
 
 				group.add(axes, scene);
 
-				resolve({ scene, meshes, group, modelSize, axes, box: scaledBox, sceneUserData: scene.userData as GLBSceneUserData });
+				resolve({ scene, meshes, lines, group, modelSize, axes, box: scaledBox, sceneUserData: scene.userData as GLBSceneUserData });
 			},
 			(xhr) => {
 				if (xhr.lengthComputable && onProgress) {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue';
 import SvgIcon from '@/components/SvgIcon/index.vue';
 import { findItemById } from '@/utils/tree';
 import { useToolStore } from '@/stores/tool';
@@ -21,9 +21,91 @@ const emit = defineEmits<{
 const activeStack = ref<string[]>([]);
 const toolStore = useToolStore();
 
+// ---- 爆炸偏移滑杆（悬浮于爆炸按钮上方） ----
+/** 当前偏移量（0-100） */
+const splitOffset = ref(0);
+/** 滑杆填充比例，用于轨道实时填充 */
+const splitFill = computed(() => `${splitOffset.value}%`);
+/** model-split 工具是否激活（激活时显示悬浮滑杆） */
+const isSplitActive = computed(() => toolStore.isActive('model-split'));
+
+/** 悬浮面板宽度（水平居中与视口钳制用） */
+const SPLIT_PANEL_WIDTH = 220;
+/** 面板与爆炸按钮的间距 */
+const SPLIT_ANCHOR_GAP = 10;
+/** 视口安全边距 */
+const SPLIT_VIEWPORT_MARGIN = 8;
+
+/** 菜单按钮元素表：按 item.id 记录，用于定位悬浮面板锚点 */
+const menuButtonRefs = new Map<string, HTMLElement>();
+
+/** setMenuButtonRef - 模板 ref 回调，登记/注销按钮元素 */
+function setMenuButtonRef(id: string, el: unknown): void {
+	if (el instanceof HTMLElement) menuButtonRefs.set(id, el);
+	else menuButtonRefs.delete(id);
+}
+
+/** 悬浮滑杆锚点：left = 按钮中心横坐标，bottom = 视口底部到按钮上方的距离 */
+const splitAnchor = ref<{ left: number; bottom: number } | null>(null);
+
+/** splitPanelStyle - 悬浮面板内联定位 + 填充比例 */
+const splitPanelStyle = computed(() => {
+	const style: Record<string, string> = { '--split-fill': splitFill.value };
+	const anchor = splitAnchor.value;
+	if (anchor) {
+		style.left = `${anchor.left}px`;
+		style.bottom = `${anchor.bottom}px`;
+	}
+	return style;
+});
+
+/** updateSplitAnchor - 依据爆炸按钮实时计算悬浮面板位置 */
+function updateSplitAnchor(): void {
+	if (!isSplitActive.value) {
+		splitAnchor.value = null;
+		return;
+	}
+	const button = menuButtonRefs.get('model-split');
+	if (!button) {
+		splitAnchor.value = null;
+		return;
+	}
+	const rect = button.getBoundingClientRect();
+	const half = SPLIT_PANEL_WIDTH / 2;
+	const center = rect.left + rect.width / 2;
+	const left = Math.min(Math.max(center, SPLIT_VIEWPORT_MARGIN + half), window.innerWidth - SPLIT_VIEWPORT_MARGIN - half);
+	const bottom = window.innerHeight - rect.top + SPLIT_ANCHOR_GAP;
+	splitAnchor.value = { left, bottom };
+}
+
+/** handleSplitInput - 滑杆输入 → 触发 model-split:offset 动作驱动模型分离 */
+function handleSplitInput() {
+	emit('tool-action', 'model-split:offset', splitOffset.value);
+}
+
+// 激活时显示并实时跟随按钮；取消激活时归零、隐藏
+watch(isSplitActive, async (active) => {
+	if (active) {
+		await nextTick();
+		updateSplitAnchor();
+		window.addEventListener('resize', updateSplitAnchor);
+		window.addEventListener('scroll', updateSplitAnchor, true);
+	} else {
+		splitOffset.value = 0;
+		splitAnchor.value = null;
+		window.removeEventListener('resize', updateSplitAnchor);
+		window.removeEventListener('scroll', updateSplitAnchor, true);
+	}
+});
+
 const tools: ToolItem[] = resolveMenu(toolbarMenu, definitionsById);
 
 const currentItems = ref<ToolItem[]>(tools);
+
+onBeforeUnmount(() => {
+	window.removeEventListener('resize', updateSplitAnchor);
+	window.removeEventListener('scroll', updateSplitAnchor, true);
+});
 const direction = ref<'forward' | 'backward'>('forward');
 
 const breadcrumbItems = computed(() => {
@@ -244,7 +326,7 @@ const handleBreadcrumbClick = (index: number) => {
 
 <template>
 	<div class="toolbar-wrapper">
-		<Transition :name="direction === 'forward' ? 'slide-forward' : 'slide-backward'" mode="out-in">
+		<Transition :name="direction === 'forward' ? 'slide-forward' : 'slide-backward'" mode="out-in" @after-enter="updateSplitAnchor">
 			<div :key="activeStack.join('-') || 'root'" class="toolbar-level">
 				<div class="toolbar-panel">
 					<!-- 面包屑导航 -->
@@ -268,13 +350,15 @@ const handleBreadcrumbClick = (index: number) => {
 								<button
 									v-for="(item, index) in currentItems"
 									:key="item.id"
+									:ref="(el) => setMenuButtonRef(item.id, el)"
 									class="toolbar-item"
 									:class="{ activated: toolStore.isActive(item.id) }"
 									:style="{ '--delay': `${index * 40}ms` }"
 									@click.stop="!didDrag && handleSelect(item)"
 								>
 									<div class="item-icon">
-										<SvgIcon :name="item.icon" :size="18" />
+										<i class="iconfont" :class="item.icon" v-if="item.icon.startsWith('icon-')"></i>
+										<SvgIcon :name="item.icon" :size="18" v-else />
 									</div>
 									<span class="item-label">{{ item.label }}</span>
 									<span v-if="item.children && item.children.length > 0" class="item-arrow">
@@ -297,6 +381,29 @@ const handleBreadcrumbClick = (index: number) => {
 				</div>
 			</div>
 		</Transition>
+
+		<!-- 爆炸偏移滑杆：悬浮于爆炸按钮上方 -->
+		<Teleport to="body">
+			<Transition name="split-pop">
+				<div v-if="isSplitActive && splitAnchor" class="split-float" :style="splitPanelStyle">
+					<div class="split-float__head">
+						<span class="split-float__label">分离</span>
+						<span class="split-float__value">{{ splitOffset }}</span>
+					</div>
+					<input
+						v-model.number="splitOffset"
+						class="split-float__range"
+						type="range"
+						min="0"
+						max="100"
+						step="1"
+						aria-label="模型分离偏移量"
+						@input="handleSplitInput"
+					/>
+					<span class="split-float__arrow"></span>
+				</div>
+			</Transition>
+		</Teleport>
 	</div>
 </template>
 
@@ -329,7 +436,7 @@ $bp-xl: 1440px;
 
 .toolbar-wrapper {
 	position: fixed;
-	bottom: clamp(24px, 2vw, 32px);
+	bottom: calc(max(clamp(2px, 0.6vw, 8px), env(safe-area-inset-bottom, 0px)) + clamp(14px, 1.4vw, 16.8px) + clamp(4px, 0.6vw, 8px) + 12px);
 	left: 50%;
 	transform: translateX(-50%);
 	z-index: 1000;
@@ -619,7 +726,10 @@ $bp-xl: 1440px;
 	height: clamp(22px, 2.5vw, 30px);
 	border-radius: clamp(4px, 0.5vw, 6px);
 	background: $primary-light-9;
-	color: $primary;
+	font-size: 18px;
+	font-style: normal;
+	line-height: 1;
+	color: $text-primary;
 	transition: all $transition-duration;
 
 	@media (max-width: $bp-xs) {
@@ -690,6 +800,136 @@ $bp-xl: 1440px;
 		color: #fff;
 		transform: rotate(90deg);
 	}
+}
+
+// 爆炸偏移滑杆（悬浮于爆炸按钮上方）
+.split-float {
+	position: fixed;
+	z-index: 1200;
+	box-sizing: border-box;
+	width: 220px;
+	max-width: calc(100vw - 16px);
+	padding: clamp(8px, 1vw, 12px) clamp(10px, 1.2vw, 14px);
+	background: $bg-color;
+	border: 1px solid $border-color-light;
+	border-radius: clamp(6px, 0.8vw, 10px);
+	box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+	transform: translateX(-50%);
+	transform-origin: bottom center;
+}
+
+.split-float__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.split-float__label {
+	font-size: clamp(11px, 1.2vw, 13px);
+	font-weight: $font-weight-primary;
+	color: $text-primary;
+}
+
+.split-float__value {
+	font-family: 'SF Mono', 'Consolas', monospace;
+	font-variant-numeric: tabular-nums;
+	font-size: clamp(11px, 1.2vw, 13px);
+	font-weight: $font-weight-primary;
+	color: $primary;
+}
+
+.split-float__range {
+	-webkit-appearance: none;
+	appearance: none;
+	display: block;
+	width: 100%;
+	height: 18px;
+	background: transparent;
+	cursor: pointer;
+	outline: none;
+
+	&::-webkit-slider-runnable-track {
+		height: 4px;
+		border-radius: 2px;
+		background: linear-gradient(
+			to right,
+			$primary 0,
+			$primary var(--split-fill, 0%),
+			$border-color-light var(--split-fill, 0%),
+			$border-color-light 100%
+		);
+	}
+
+	&::-webkit-slider-thumb {
+		-webkit-appearance: none;
+		appearance: none;
+		width: 14px;
+		height: 14px;
+		margin-top: -5px;
+		border-radius: 50%;
+		background: $primary;
+		border: 2px solid $bg-color;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+		transition: transform $transition-duration;
+
+		&:hover {
+			transform: scale(1.12);
+		}
+	}
+
+	&::-moz-range-track {
+		height: 4px;
+		border-radius: 2px;
+		background: $border-color-light;
+	}
+
+	&::-moz-range-progress {
+		height: 4px;
+		border-radius: 2px;
+		background: $primary;
+	}
+
+	&::-moz-range-thumb {
+		width: 13px;
+		height: 13px;
+		border-radius: 50%;
+		background: $primary;
+		border: 2px solid $bg-color;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+	}
+}
+
+.split-float__arrow {
+	position: absolute;
+	left: 50%;
+	bottom: -6px;
+	box-sizing: border-box;
+	width: 12px;
+	height: 12px;
+	background: $bg-color;
+	border-right: 1px solid $border-color-light;
+	border-bottom: 1px solid $border-color-light;
+	transform: translateX(-50%) rotate(45deg);
+}
+
+// 悬浮滑杆出入场动画
+.split-pop-enter-active {
+	transition:
+		opacity 0.2s ease,
+		transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.split-pop-leave-active {
+	transition:
+		opacity 0.16s ease,
+		transform 0.18s ease;
+}
+
+.split-pop-enter-from,
+.split-pop-leave-to {
+	opacity: 0;
+	transform: translateX(-50%) translateY(8px) scale(0.96);
 }
 
 // 分隔线

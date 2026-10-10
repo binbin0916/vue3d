@@ -226,6 +226,8 @@ export interface GLBSolidInfo {
 	volumeRelError: number | null;
 	/** value: ≥0 的整数 — 属于该 solid 的面数 */
 	faceCount: number;
+	/** value: array<number> — 该 solid 中包含的所有 Mesh */
+	meshIds: number[];
 	/** value: true/false — 该 solid 是否 BRep 拓扑闭合 */
 	isWatertight: boolean;
 }

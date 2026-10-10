@@ -12,6 +12,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     ColorPicker: typeof import('./src/components/ColorPicker/index.vue')['default']
+    CopyrightNotice: typeof import('./src/components/CopyrightNotice/index.vue')['default']
     DraggableDialog: typeof import('./src/components/DraggableDialog/index.vue')['default']
     ElOption: typeof import('element-plus/es')['ElOption']
     ElSelect: typeof import('element-plus/es')['ElSelect']

@@ -22,5 +22,5 @@ export const hideAxes: ToolHandler = (ctx: ToolContext) => {
 };
 
 export const tools: ToolDefinition[] = [
-	defineTool({ id: 'axes', menu: { icon: 'axes', label: '坐标系', activatable: true }, activate: showAxes, deactivate: hideAxes }),
+	defineTool({ id: 'axes', menu: { icon: 'icon-axis', label: '坐标系', activatable: true }, activate: showAxes, deactivate: hideAxes }),
 ];

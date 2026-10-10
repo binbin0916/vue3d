@@ -26,6 +26,6 @@ export const annotatePin: ToolHandler = (ctx: ToolContext) => {
 };
 
 export const tools: ToolDefinition[] = [
-	defineTool({ id: 'annotate-text', menu: { icon: 'annotate', label: '文字标注', activatable: true }, activate: annotateText }),
-	defineTool({ id: 'annotate-pin', menu: { icon: 'annotate', label: '图钉标注', activatable: true }, activate: annotatePin }),
+	defineTool({ id: 'annotate-text', menu: { icon: 'icon-annotationIcon', label: '文字标注', activatable: true }, activate: annotateText }),
+	defineTool({ id: 'annotate-pin', menu: { icon: 'icon-faceMarkIcon', label: '图钉标注', activatable: true }, activate: annotatePin }),
 ];

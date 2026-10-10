@@ -183,7 +183,8 @@ const getItemPosition = (index: number, total: number) => {
 					}"
 				>
 					<button class="radial-btn" @mouseenter="hoveredItem = item.id" @mouseleave="hoveredItem = null" @click.stop="handleSelect(item)">
-						<SvgIcon :name="item.icon" :size="18" />
+						<i v-if="item.icon.startsWith('icon-')" class="iconfont" :class="item.icon"></i>
+						<SvgIcon v-else :name="item.icon" :size="18" />
 					</button>
 					<Transition name="tooltip">
 						<span v-if="hoveredItem === item.id" class="tooltip right">{{ item.label }}</span>
@@ -211,7 +212,8 @@ const getItemPosition = (index: number, total: number) => {
 						:class="{ activated: toolStore.isActive(item.id) }"
 						@click.stop="handleSelect(item)"
 					>
-						<SvgIcon :name="item.icon" :size="16" />
+						<i v-if="item.icon.startsWith('icon-')" class="iconfont" :class="item.icon"></i>
+						<SvgIcon v-else :name="item.icon" :size="16" />
 						<span class="item-label">{{ item.label }}</span>
 						<span v-if="item.children" class="item-arrow">
 							<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
@@ -337,6 +339,12 @@ $primary-dark: #1565c0;
 	&:active {
 		transform: scale(0.95);
 	}
+
+	.iconfont {
+		font-size: 18px;
+		font-style: normal;
+		line-height: 1;
+	}
 }
 
 @keyframes radialPop {
@@ -438,6 +446,12 @@ $primary-dark: #1565c0;
 		:deep(.svg-icon) {
 			color: #fff;
 		}
+	}
+
+	.iconfont {
+		font-size: 16px;
+		font-style: normal;
+		line-height: 1;
 	}
 }
 

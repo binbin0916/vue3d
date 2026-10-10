@@ -11,6 +11,7 @@ import DraggableDialog from '@/components/DraggableDialog/index.vue';
 import ColorPicker from '@/components/ColorPicker/index.vue';
 import SectionDialog from '@/components/SectionDialog/index.vue';
 import ModelPropDialog from '@/components/ModelPropDialog/index.vue';
+import CopyrightNotice from '@/components/CopyrightNotice/index.vue';
 
 const toolStore = useToolStore();
 
@@ -141,6 +142,7 @@ onUnmounted(() => {
 		<ModelLoader :loading="loading" :loaded="loadProgress.loaded" :total="loadProgress.total" :percent="loadProgress.percent" />
 		<RadialMenu @select="handleRadialSelect" @activate="handleRadialActivate" />
 		<ToolBar @tool-action="handleToolAction" />
+		<CopyrightNotice />
 
 		<!-- 颜色选择弹窗 -->
 		<DraggableDialog v-model="colorDialog.showDialog.value" title="颜色选择" width="320px" top="120px">

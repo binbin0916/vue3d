@@ -242,12 +242,27 @@ export const restoreMaterial: ToolHandler = (ctx: ToolContext) => {
 };
 
 export const tools: ToolDefinition[] = [
-	defineTool({ id: 'material-wireframe', menu: { icon: 'material', label: '线框模式', activatable: true, group: 'material' }, activate: materialWireframe, deactivate: restoreMaterial }),
-	defineTool({ id: 'material-xray', menu: { icon: 'material', label: 'X光模式', activatable: true, group: 'material' }, activate: materialXray, deactivate: restoreMaterial }),
-	defineTool({ id: 'material-normal', menu: { icon: 'material', label: '法线显示', activatable: true, group: 'material' }, activate: materialNormal, deactivate: restoreMaterial }),
+	defineTool({
+		id: 'material-wireframe',
+		menu: { icon: 'icon-wireframe', label: '线框模式', activatable: true, group: 'material' },
+		activate: materialWireframe,
+		deactivate: restoreMaterial,
+	}),
+	defineTool({
+		id: 'material-xray',
+		menu: { icon: 'icon-transparent', label: 'X光模式', activatable: true, group: 'material' },
+		activate: materialXray,
+		deactivate: restoreMaterial,
+	}),
+	defineTool({
+		id: 'material-normal',
+		menu: { icon: 'icon-noOutline', label: '法线显示', activatable: true, group: 'material' },
+		activate: materialNormal,
+		deactivate: restoreMaterial,
+	}),
 	defineTool({
 		id: 'material-solid',
-		menu: { icon: 'material', label: '纯色显示', activatable: true, group: 'material' },
+		menu: { icon: 'icon-color', label: '纯色显示', activatable: true, group: 'material' },
 		defaultColor: DEFAULT_SOLID_COLOR,
 		activate: materialSolid,
 		deactivate: restoreMaterial,
