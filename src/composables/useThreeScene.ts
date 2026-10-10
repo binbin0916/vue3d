@@ -81,6 +81,9 @@ export function useThreeScene() {
 	// ---- ViewCube（独立渲染器 + DOM） ----
 	let cubeResult: ReturnType<typeof useViewCube> | null = null;
 
+	// ---- 环境光照资源（场景销毁时释放，避免 GPU 资源泄漏） ----
+	let lightingResult: ReturnType<typeof addLights> | null = null;
+
 	/**
 	 * render - 执行单帧渲染
 	 *
@@ -382,7 +385,13 @@ export function useThreeScene() {
 			scene.value.add(modelGroup.value);
 
 			camera.value = createCamera(result.modelSize, modelGroup.value.position);
-			addLights(scene.value, result.modelSize);
+			lightingResult = addLights(scene.value, result.modelSize, renderer.value);
+			// 主光/阴影相机每帧跟随模型世界坐标，保证平移模型时投影实时跟随、不丢失
+			const lightOrigin = new THREE.Vector3();
+			addFrameTask('light-follow', () => {
+				modelGroup.value.getWorldPosition(lightOrigin);
+				lightingResult?.update(lightOrigin);
+			});
 			controls.value = createControls(camera.value, renderer.value.domElement, result.modelSize);
 
 			// ViewCube（独立渲染器 + DOM 容器）
@@ -416,6 +425,8 @@ export function useThreeScene() {
 		window.removeEventListener('mouseup', onMouseUp);
 		renderer.value.dispose();
 		cubeResult?.dispose();
+		lightingResult?.dispose();
+		lightingResult = null;
 	};
 
 	/**

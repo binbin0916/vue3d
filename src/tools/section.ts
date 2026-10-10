@@ -237,7 +237,7 @@ const initControls = (ctx: ToolContext) => {
 	control.addEventListener('dragging-changed', (event) => {
 		ctx.controls.enabled = !event.value;
 	});
-	control.addEventListener('change', () => {});
+	control.addEventListener('change', () => { });
 };
 
 const disposeControls = (ctx: ToolContext) => {

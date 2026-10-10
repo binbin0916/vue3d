@@ -9,6 +9,7 @@ import type { MenuNode } from './registry';
 export const toolbarMenu: MenuNode[] = [
 	'return-origin',
 	'rotate',
+	'shadow-ground',
 	'model-split',
 	{
 		id: 'modelprop',
@@ -118,6 +119,7 @@ export const radialMenu: MenuNode[] = [
 			{ id: 'settings-grid', icon: 'icon-mesh', label: '网格显示', activatable: true },
 			{ id: 'settings-axes', icon: 'icon-axis', label: '坐标轴', activatable: true },
 			{ id: 'settings-bg', icon: 'icon-changeBackground', label: '背景色' },
+			'shadow-ground',
 		],
 	},
 	{

@@ -25,10 +25,13 @@ export function createRenderer(domEl: HTMLElement): THREE.WebGLRenderer {
 	renderer.setPixelRatio(Math.min(window.devicePixelRatio * 2, isMobile ? 1.5 : 2));
 	renderer.shadowMap.enabled = true;
 	renderer.shadowMap.type = THREE.PCFShadowMap;
+	renderer.shadowMap.autoUpdate = true;
 	renderer.outputColorSpace = THREE.SRGBColorSpace;
+	renderer.toneMapping = THREE.NeutralToneMapping;
+	renderer.toneMappingExposure = 1.0;
 	renderer.setSize(window.innerWidth, window.innerHeight);
 	renderer.setClearColor('#ffffff');
-	renderer.autoClear = false;
+	renderer.autoClear = true;
 	renderer.localClippingEnabled = true;
 
 	domEl.appendChild(renderer.domElement);

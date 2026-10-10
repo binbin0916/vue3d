@@ -105,11 +105,18 @@ export function loadModel(url: string, onProgress?: (_progress: LoadProgress) =>
 							});
 						}
 						obj.material.side = THREE.DoubleSide;
+						// 将面沿深度方向后推，避免与共面的 line 争夺深度导致运动中线条闪烁（z-fighting）
+						obj.material.polygonOffset = true;
+						obj.material.polygonOffsetFactor = 1;
+						obj.material.polygonOffsetUnits = 1;
 						obj.castShadow = true;
 						obj.receiveShadow = true;
 
 						meshes.push(obj);
 					} else if (obj.isLineSegments && obj.isLine && obj.type === 'LineSegments') {
+						obj.material.side = THREE.DoubleSide;
+						obj.castShadow = true;
+						obj.receiveShadow = true;
 						lines.push(obj);
 					}
 				});
