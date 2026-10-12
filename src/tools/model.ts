@@ -1,6 +1,6 @@
 import type { ToolContext, ToolHandler, ToolDefinition, CustomAction } from './types';
 import { defineTool, defineAction } from './registry';
-import { showTooltip } from '@/components/FloatTooltip/controller';
+import { showTooltip, hideTooltip } from '@/components/FloatTooltip/controller';
 import type { GLBSolidInfo } from '@/types/userdata-types';
 import * as THREE from 'three';
 
@@ -94,6 +94,22 @@ let splitSession: SplitSession | null = null;
 let splitCurrent = 0;
 let splitTarget = 0;
 let splitAnimating = false;
+/** 分离动画期间是否已隐藏线条（与 ctx.hideLines 引用计数配对，避免重复隐藏） */
+let splitLinesHidden = false;
+
+/** hideSplitLines - 分离动画期间临时隐藏线条（削减 draw call，只隐藏一次） */
+const hideSplitLines = (ctx: ToolContext) => {
+	if (splitLinesHidden) return;
+	splitLinesHidden = true;
+	ctx.hideLines();
+};
+
+/** showSplitLines - 分离动画结束/中断后恢复线条可见性 */
+const showSplitLines = (ctx: ToolContext) => {
+	if (!splitLinesHidden) return;
+	splitLinesHidden = false;
+	ctx.showLines();
+};
 
 /**
  * applySolidOffset - 按给定 offset 值写入各对象位置
@@ -280,6 +296,7 @@ const ensureSplitSession = (ctx: ToolContext): boolean => {
 
 /** startSplitFrameTask - 启动(幂等)分离逐帧动画任务 */
 const startSplitFrameTask = (ctx: ToolContext) => {
+	hideSplitLines(ctx);
 	if (splitAnimating) return;
 	splitAnimating = true;
 	ctx.addFrameTask(SPLIT_FRAME_TASK_ID, ({ delta }) => stepModelSplit(ctx, delta));
@@ -294,6 +311,7 @@ const startSplitFrameTask = (ctx: ToolContext) => {
 const stepModelSplit = (ctx: ToolContext, delta: number) => {
 	if (!splitSession) {
 		splitAnimating = false;
+		showSplitLines(ctx);
 		ctx.removeFrameTask(SPLIT_FRAME_TASK_ID);
 		return;
 	}
@@ -303,6 +321,9 @@ const stepModelSplit = (ctx: ToolContext, delta: number) => {
 	else splitCurrent += diff * (1 - Math.exp(-SPLIT_EASE_K * delta));
 	applySolidOffset(splitCurrent);
 
+	// 运动结束（已到达目标）：恢复线条可见性
+	if (splitCurrent === splitTarget) showSplitLines(ctx);
+
 	// 已完全还原：清理会话并注销逐帧任务
 	if (splitTarget === 0 && Math.abs(splitCurrent) < 1e-4) {
 		applySolidOffset(0);
@@ -310,6 +331,7 @@ const stepModelSplit = (ctx: ToolContext, delta: number) => {
 		splitCurrent = 0;
 		splitTarget = 0;
 		splitAnimating = false;
+		showSplitLines(ctx);
 		ctx.removeFrameTask(SPLIT_FRAME_TASK_ID);
 	}
 };
@@ -354,6 +376,16 @@ export const restoreModelSplit: ToolHandler = (ctx: ToolContext) => {
 	modelSplit(ctx, 0);
 };
 
+/**
+ * closeModel - 关闭选择项
+ *
+ * @param {ToolContext} ctx - 工具执行上下文
+ */
+export const closeModel: ToolHandler = (ctx: ToolContext) => {
+	void ctx;
+	hideTooltip();
+};
+
 export const tools: ToolDefinition[] = [
 	defineTool({
 		id: 'modelprop-pointLineFace',
@@ -364,6 +396,7 @@ export const tools: ToolDefinition[] = [
 		id: 'modelprop-entity',
 		menu: { icon: 'icon-entity_attribute', label: '实体属性', activatable: true, group: 'modelprop' },
 		activate: getEntity,
+		deactivate: closeModel,
 	}),
 	defineTool({
 		id: 'modelprop-overall',
