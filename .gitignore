@@ -45,3 +45,7 @@ __screenshots__/
 docs/
 
 example
+
+# 本地模型文件：仅跟踪当前使用的 GLD11-25.glb，其余模型仅保留本地不提交到远程
+/public/model/get/*.glb
+!/public/model/get/GLD11-25.glb
