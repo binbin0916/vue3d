@@ -31,6 +31,8 @@ export interface ModelResult {
 	group: THREE.Object3D;
 	/** 归一化后包围盒最大边长（≈ TARGET_SIZE），用于灯光、相机、控制器的尺寸基准 */
 	modelSize: number;
+	/** 归一化缩放系数（真实尺寸 → 显示尺寸）；真实长度 = 显示长度 / scaleFactor */
+	scaleFactor: number;
 	/** 模型局部坐标系 */
 	axes: THREE.AxesHelper;
 	/** 归一化缩放后的模型包围盒 */
@@ -169,7 +171,17 @@ export function loadModel(url: string, onProgress?: (_progress: LoadProgress) =>
 
 				group.add(axes, scene);
 
-				resolve({ scene, meshes, lines, group, modelSize, axes, box: scaledBox, sceneUserData: scene.userData as GLBSceneUserData });
+				resolve({
+					scene,
+					meshes,
+					lines,
+					group,
+					modelSize,
+					scaleFactor,
+					axes,
+					box: scaledBox,
+					sceneUserData: scene.userData as GLBSceneUserData,
+				});
 			},
 			(xhr) => {
 				if (xhr.lengthComputable && onProgress) {

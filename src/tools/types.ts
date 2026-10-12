@@ -21,6 +21,8 @@ export interface ToolContext {
 	controls: TrackballControls;
 	/** 模型包围盒最大边长 */
 	modelSize: number;
+	/** 归一化缩放系数：真实尺寸 = 显示尺寸 / scaleFactor（模型被归一化缩放后的换算依据） */
+	scaleFactor: number;
 	/** 移动速度倍率 */
 	moveSpeed: number;
 	/** 模型中所有 Mesh 对象的扁平数组 */

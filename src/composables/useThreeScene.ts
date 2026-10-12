@@ -50,6 +50,7 @@ export function useThreeScene() {
 	const loading = ref(true);
 	const loadProgress = ref<LoadProgress>({ loaded: 0, total: 0, percent: 0 });
 	const modelSize = ref(0);
+	const scaleFactor = ref(1);
 
 	// 移动模式状态
 	const isMoveMode = ref(false);
@@ -475,6 +476,7 @@ export function useThreeScene() {
 
 			modelGroup.value = result.group;
 			modelSize.value = result.modelSize;
+			scaleFactor.value = result.scaleFactor;
 			axes.value = result.axes;
 			meshes.value = result.meshes;
 			lines.value = result.lines;
@@ -601,6 +603,7 @@ export function useThreeScene() {
 		modelGroup,
 		controls,
 		modelSize,
+		scaleFactor,
 		isMoveMode,
 		moveSpeed,
 		autoRotate,
