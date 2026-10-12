@@ -149,6 +149,13 @@ const handleChange = async (v: string) => {
 		});
 	}
 };
+
+const copyTextFn = async (v: string | number) => {
+	const s = typeof v === 'string' ? v : formatDecimal(v);
+	const flag = await copyText(s);
+	if (flag) return ElMessage.success('复制成功!');
+	return ElMessage.warning('复制失败!');
+};
 </script>
 
 <template>
@@ -164,7 +171,7 @@ const handleChange = async (v: string) => {
 				<span class="mp-row__value">
 					<span>{{ formatDecimal(volume) }}</span>
 					<span class="mp-unit">{{ userData.units.volume }}</span>
-					<svg-icon class="mp-icon" name="copy" :size="16" @click="copyText(formatDecimal(volume))" />
+					<svg-icon class="mp-icon" name="copy" :size="16" @click="copyTextFn(volume)" />
 				</span>
 			</div>
 			<div class="mp-row">
@@ -172,7 +179,7 @@ const handleChange = async (v: string) => {
 				<span class="mp-row__value">
 					<span>{{ formatDecimal(surfaceArea) }}</span>
 					<span class="mp-unit">{{ userData.units.area }}</span>
-					<svg-icon class="mp-icon" name="copy" :size="16" @click="copyText(formatDecimal(surfaceArea))"></svg-icon>
+					<svg-icon class="mp-icon" name="copy" :size="16" @click="copyTextFn(surfaceArea)"></svg-icon>
 				</span>
 			</div>
 			<div class="mp-row">
@@ -184,7 +191,7 @@ const handleChange = async (v: string) => {
 						class="mp-icon"
 						name="copy"
 						:size="16"
-						@click="copyText(`${formatDecimal(boxSize.x)}*${formatDecimal(boxSize.y)}*${formatDecimal(boxSize.z)}`)"
+						@click="copyTextFn(`${formatDecimal(boxSize.x)}*${formatDecimal(boxSize.y)}*${formatDecimal(boxSize.z)}`)"
 					></svg-icon>
 				</span>
 			</div>
@@ -193,7 +200,7 @@ const handleChange = async (v: string) => {
 				<span class="mp-row__value">
 					<span>{{ formatDecimal(boxVolume) }}</span>
 					<span class="mp-unit">{{ userData.units.volume }}</span>
-					<svg-icon class="mp-icon" name="copy" :size="16" @click="copyText(formatDecimal(boxVolume))"></svg-icon>
+					<svg-icon class="mp-icon" name="copy" :size="16" @click="copyTextFn(boxVolume)"></svg-icon>
 				</span>
 			</div>
 			<div class="mp-row">
@@ -220,7 +227,7 @@ const handleChange = async (v: string) => {
 				<span class="mp-row__value">
 					<span>{{ formatDecimal(weight.value) }}</span>
 					<span class="mp-unit">{{ weight.unit }}</span>
-					<svg-icon class="mp-icon" name="copy" :size="16" @click="copyText(formatDecimal(weight.value))"></svg-icon>
+					<svg-icon class="mp-icon" name="copy" :size="16" @click="copyTextFn(weight.value)"></svg-icon>
 				</span>
 			</div>
 		</section>
