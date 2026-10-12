@@ -134,6 +134,7 @@ export interface ToolContext {
 	modelGroup: THREE.Object3D; // model root group (rotated 45°)
 	controls: TrackballControls;
 	modelSize: number; // bounding-box max edge length
+	scaleFactor: number; // normalization scale (real = display / scaleFactor)
 	moveSpeed: number; // move speed multiplier
 	meshes: THREE.Mesh[]; // flat array of all Mesh objects
 	box: THREE.Box3; // model bounding box
@@ -288,6 +289,7 @@ export function useThreeScene() {
 		modelGroup, // Model root group (rotated 45°)
 		controls, // TrackballControls
 		modelSize, // Model bounding box max edge length
+		scaleFactor, // Normalization scale (real = display / scaleFactor)
 		isMoveMode, // Move mode state
 		moveSpeed, // Move speed multiplier
 		autoRotate, // Auto-rotate state
@@ -305,6 +307,28 @@ export function useThreeScene() {
 		removeFrameTask, // Remove frame task
 	};
 }
+```
+
+### Real-size conversion
+
+Imported models are normalized to a uniform display size (`TARGET_SIZE = 63`), so scene geometry carries *display* units rather than real ones. `ToolContext.scaleFactor` (= `TARGET_SIZE / raw bounding-box max edge`) converts them back to real units (mm):
+
+- length: `real = display / scaleFactor`
+- area: `real = display / scaleFactor²`
+- volume: `real = display / scaleFactor³`
+- angles: unchanged
+
+`src/utils/measure.ts` wraps these as `toRealLength` / `toRealArea` / `toRealVolume`:
+
+```typescript
+import { toRealLength } from '@/utils/measure';
+
+// A distance-measure tool converts a scene-space distance to real length
+const measureDistance: ToolHandler = (ctx, points: THREE.Vector3[]) => {
+	const sceneDistance = points[0].distanceTo(points[1]);
+	const realLength = toRealLength(sceneDistance, ctx.scaleFactor); // mm
+	console.info('真实距离(mm):', realLength.toFixed(2));
+};
 ```
 
 ### useToolStore

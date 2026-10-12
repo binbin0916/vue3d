@@ -223,6 +223,7 @@ interface ToolContext {
 	modelGroup: THREE.Object3D; // 模型根组（已旋转 45°）
 	controls: TrackballControls;
 	modelSize: number; // 模型包围盒最大边长
+	scaleFactor: number; // 归一化缩放系数（真实尺寸 = 显示尺寸 / scaleFactor）
 	moveSpeed: number; // 移动速度倍率
 	meshes: THREE.Mesh[]; // 模型中所有 Mesh 的扁平数组
 	box: THREE.Box3; // model 包围盒
@@ -238,6 +239,20 @@ interface ToolContext {
 	addFrameTask: (id: string, task: FrameTask) => void;
 	removeFrameTask: (id: string) => void;
 }
+```
+
+#### 真实尺寸换算
+
+模型导入时会被归一化缩放到统一显示尺寸（`TARGET_SIZE = 63`），场景中的几何尺寸是「显示尺寸」而非真实尺寸。上下文提供 `scaleFactor`（= `TARGET_SIZE / 原始包围盒最大边`）用于换算回真实尺寸（单位 mm）：长度 `真实 = 显示 ÷ scaleFactor`，面积 `÷ scaleFactor²`，体积 `÷ scaleFactor³`（角度不受影响）。
+
+`src/utils/measure.ts` 已封装 `toRealLength` / `toRealArea` / `toRealVolume`：
+
+```ts
+import { toRealLength } from '@/utils/measure';
+
+// 测量两点距离（场景坐标）并换算为真实长度
+const sceneDistance = pointA.distanceTo(pointB);
+const realLength = toRealLength(sceneDistance, ctx.scaleFactor); // mm
 ```
 
 ## 工具栏特性
