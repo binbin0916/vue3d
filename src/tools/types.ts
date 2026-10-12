@@ -50,6 +50,10 @@ export interface ToolContext {
 	addFrameTask: (_id: string, _task: FrameTask) => void;
 	/** 结束动画 */
 	removeFrameTask: (_id: string) => void;
+	/** 临时隐藏全部线条（与 showLines 配对使用，引用计数） */
+	hideLines: () => void;
+	/** 撤销一次线条隐藏，计数归零时恢复原始可见性 */
+	showLines: () => void;
 }
 
 /**

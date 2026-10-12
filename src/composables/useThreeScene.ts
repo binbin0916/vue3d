@@ -177,6 +177,7 @@ export function useThreeScene() {
 		if (!isMoveMode.value || e.button !== 0) return;
 		isDragging = true;
 		previousMousePosition = { x: e.clientX, y: e.clientY };
+		beginInteraction(false);
 	};
 
 	/**
@@ -219,6 +220,7 @@ export function useThreeScene() {
 	 */
 	const onMouseUp = () => {
 		isDragging = false;
+		scheduleEndInteraction();
 	};
 
 	/**
@@ -344,6 +346,102 @@ export function useThreeScene() {
 		}
 	};
 
+	// ---- 线条临时隐藏（引用计数）----
+	// 交互降级与「模型分离(爆炸)」动画都会临时隐藏线条以减少 draw call；
+	// 用引用计数让多个来源叠加时互不干扰，仅在计数归零时恢复原始可见性。
+	let lineHideCount = 0;
+	let lineHideSnapshot: { line: THREE.LineSegments; visible: boolean }[] = [];
+
+	/** hideLines - 临时隐藏全部线条（与 showLines 配对使用，引用计数） */
+	const hideLines = () => {
+		if (lineHideCount === 0) {
+			lineHideSnapshot = lines.value.map((line) => ({ line, visible: line.visible }));
+			lineHideSnapshot.forEach(({ line }) => (line.visible = false));
+		}
+		lineHideCount += 1;
+	};
+
+	/** showLines - 撤销一次隐藏，计数归零时恢复原始可见性 */
+	const showLines = () => {
+		if (lineHideCount === 0) return;
+		lineHideCount -= 1;
+		if (lineHideCount === 0) {
+			lineHideSnapshot.forEach(({ line, visible }) => (line.visible = visible));
+			lineHideSnapshot = [];
+		}
+	};
+
+	// ---- 交互时降级（性能）----
+	// 大模型（如主轴-1 有 6868 条 LineSegments）逐条绘制会造成 draw call 爆炸，
+	// 拖拽/缩放期间明显卡顿。线条显示与阴影贴图重绘都与相机姿态无关，
+	// 因此交互期间临时隐藏线条并冻结阴影贴图更新，松手后原样恢复，
+	// 交互结束后补渲染一次阴影，保证静止画面与交互前一致。
+	let degradeActive = false;
+	let degradeFreezeShadow = false;
+	let degradeShadowAutoUpdate = true;
+	let degradeRestoreTimer = 0;
+
+	// 交互结束后延迟恢复：滚轮缩放时 TrackballControls 会在同一帧内连续派发
+	// start/end，若立即恢复则线条根本来不及隐藏，故延迟一小段时间再恢复，
+	// 连续的滚轮刻度期间保持降级状态。
+	const DEGRADE_RESTORE_DELAY = 180;
+
+	/**
+	 * beginInteraction - 进入交互时降级
+	 *
+	 * @description 隐藏线条以削减 draw call。仅当模型自身静止（相机旋转/缩放）时才冻结
+	 * 阴影贴图重绘——移动模式下模型正在位移，阴影需跟随，故不冻结。
+	 *
+	 * @param {boolean} freezeShadow - 是否冻结阴影贴图重绘
+	 */
+	const beginInteraction = (freezeShadow: boolean) => {
+		if (degradeRestoreTimer) {
+			clearTimeout(degradeRestoreTimer);
+			degradeRestoreTimer = 0;
+		}
+		if (degradeActive) return;
+		degradeActive = true;
+		degradeFreezeShadow = freezeShadow;
+		hideLines();
+
+		const shadowMap = renderer.value.shadowMap;
+		if (freezeShadow && shadowMap) {
+			degradeShadowAutoUpdate = shadowMap.autoUpdate;
+			shadowMap.autoUpdate = false;
+		}
+	};
+
+	/** endInteraction - 结束交互：恢复线条可见性，必要时补渲染一次阴影 */
+	const endInteraction = () => {
+		if (degradeRestoreTimer) {
+			clearTimeout(degradeRestoreTimer);
+			degradeRestoreTimer = 0;
+		}
+		if (!degradeActive) return;
+		degradeActive = false;
+		showLines();
+
+		const shadowMap = renderer.value.shadowMap;
+		if (degradeFreezeShadow && shadowMap) {
+			shadowMap.autoUpdate = degradeShadowAutoUpdate;
+			shadowMap.needsUpdate = true;
+		}
+		degradeFreezeShadow = false;
+	};
+
+	/** scheduleEndInteraction - 延迟结束交互，合并滚轮缩放的同帧 start/end 抖动 */
+	const scheduleEndInteraction = () => {
+		if (degradeRestoreTimer) clearTimeout(degradeRestoreTimer);
+		degradeRestoreTimer = window.setTimeout(() => {
+			degradeRestoreTimer = 0;
+			endInteraction();
+		}, DEGRADE_RESTORE_DELAY);
+	};
+
+	// 控制器交互（相机旋转/缩放）期间冻结阴影；移动模式（模型位移）不冻结
+	const onControlsStart = () => beginInteraction(true);
+	const onControlsEnd = () => scheduleEndInteraction();
+
 	/**
 	 * init - 初始化 3D 场景
 	 *
@@ -393,6 +491,9 @@ export function useThreeScene() {
 				lightingResult?.update(lightOrigin);
 			});
 			controls.value = createControls(camera.value, renderer.value.domElement, result.modelSize);
+			// 交互（旋转/缩放）期间降级：隐藏线条 + 冻结阴影贴图重绘，松手恢复
+			controls.value.addEventListener('start', onControlsStart);
+			controls.value.addEventListener('end', onControlsEnd);
 
 			// ViewCube（独立渲染器 + DOM 容器）
 			cubeResult = useViewCube(container, handleFaceClick);
@@ -423,6 +524,9 @@ export function useThreeScene() {
 		containerElement?.removeEventListener('mousedown', onMouseDown);
 		window.removeEventListener('mousemove', onMouseMove);
 		window.removeEventListener('mouseup', onMouseUp);
+		controls.value.removeEventListener('start', onControlsStart);
+		controls.value.removeEventListener('end', onControlsEnd);
+		if (degradeRestoreTimer) clearTimeout(degradeRestoreTimer);
 		renderer.value.dispose();
 		cubeResult?.dispose();
 		lightingResult?.dispose();
@@ -513,5 +617,7 @@ export function useThreeScene() {
 		setAxesVisibe,
 		addFrameTask,
 		removeFrameTask,
+		hideLines,
+		showLines,
 	};
 }

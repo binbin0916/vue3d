@@ -115,8 +115,8 @@ export function loadModel(url: string, onProgress?: (_progress: LoadProgress) =>
 						meshes.push(obj);
 					} else if (obj.isLineSegments && obj.isLine && obj.type === 'LineSegments') {
 						obj.material.side = THREE.DoubleSide;
-						obj.castShadow = true;
-						obj.receiveShadow = true;
+						obj.castShadow = false;
+						obj.receiveShadow = false;
 						lines.push(obj);
 					}
 				});
