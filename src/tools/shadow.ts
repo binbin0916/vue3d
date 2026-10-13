@@ -38,7 +38,7 @@ export const showGroundShadow: ToolHandler = (ctx: ToolContext) => {
 	if (ctx.scene.userData[SHADOW_GROUND_KEY]) return;
 
 	const radius = ctx.box.getBoundingSphere(new THREE.Sphere()).radius || ctx.modelSize * 0.5;
-	const planeSize = radius * 6;
+	const planeSize = radius * 10;
 
 	const geometry = new THREE.PlaneGeometry(planeSize, planeSize);
 	geometry.rotateX(-Math.PI / 4);
