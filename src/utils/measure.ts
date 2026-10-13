@@ -11,7 +11,7 @@
  * 显示长度 → 真实长度
  *
  * @example
- * // 测量工具中把两点在场景坐标下的距离换算为真实长度（mm）
+ * 测量工具中把两点在场景坐标下的距离换算为真实长度（mm）
  * import { toRealLength } from '@/utils/measure';
  * const measureDistance: ToolHandler = (ctx, points: THREE.Vector3[]) => {
  * 	const sceneDistance = points[0].distanceTo(points[1]);

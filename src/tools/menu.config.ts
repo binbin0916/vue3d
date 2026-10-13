@@ -9,21 +9,6 @@ import type { MenuNode } from './registry';
 export const toolbarMenu: MenuNode[] = [
 	'return-origin',
 	'rotate',
-	'shadow-ground',
-	'model-split',
-	{
-		id: 'modelprop',
-		icon: 'icon-moxingjibenxinxi',
-		label: '模型属性',
-		children: ['modelprop-pointLineFace', 'modelprop-entity', 'modelprop-overall'],
-	},
-	'axes',
-	{
-		id: 'view',
-		icon: 'icon-viewer3d',
-		label: '视角',
-		children: ['view-front', 'view-back', 'view-left', 'view-right', 'view-top', 'view-bottom'],
-	},
 	{
 		id: 'measure',
 		icon: 'icon-measure',
@@ -79,16 +64,51 @@ export const toolbarMenu: MenuNode[] = [
 		],
 	},
 	{
-		id: 'annotate',
-		icon: 'icon-annotation',
-		label: '标注',
-		children: ['annotate-text', 'annotate-pin'],
+		id: 'modelprop',
+		icon: 'icon-moxingjibenxinxi',
+		label: '模型属性',
+		children: ['modelprop-pointLineFace', 'modelprop-entity', 'modelprop-overall'],
 	},
 	{
 		id: 'section',
 		icon: 'icon-parting',
 		label: '剖切',
 		children: ['section-plane', 'section-sphere'],
+	},
+	// 包围盒
+	// 拖动
+	// 局部放大
+	// 实时位置
+	// 坐标轴
+	// 基本信息
+	// 模型效果
+	// 模型效果
+	// 显示隐藏
+	// 截图
+	// 全屏
+	// 设置
+	// 分享
+	'model-split',
+	{
+		id: 'modelffect',
+		icon: 'icon-showSwitch',
+		label: '模型效果',
+		children: ['modelelffect-transparent', 'modelelffect-outline', 'modelelffect-wireframe', 'modelelffect-shadow'],
+	},
+
+	'axes',
+	{
+		id: 'view',
+		icon: 'icon-viewer3d',
+		label: '视角',
+		children: ['view-front', 'view-back', 'view-left', 'view-right', 'view-top', 'view-bottom'],
+	},
+
+	{
+		id: 'annotate',
+		icon: 'icon-annotation',
+		label: '标注',
+		children: ['annotate-text', 'annotate-pin'],
 	},
 	{
 		id: 'material',
