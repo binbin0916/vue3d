@@ -56,6 +56,10 @@ export interface ToolContext {
 	hideLines: () => void;
 	/** 撤销一次线条隐藏，计数归零时恢复原始可见性 */
 	showLines: () => void;
+	/** 进入性能降级：隐藏线条，freezeShadow 时冻结阴影贴图更新；仅重模型生效，引用计数可叠加 */
+	beginDegrade: (_freezeShadow: boolean) => void;
+	/** 退出性能降级（与 beginDegrade 配对） */
+	endDegrade: (_freezeShadow: boolean) => void;
 }
 
 /**

@@ -94,21 +94,26 @@ let splitSession: SplitSession | null = null;
 let splitCurrent = 0;
 let splitTarget = 0;
 let splitAnimating = false;
-/** 分离动画期间是否已隐藏线条（与 ctx.hideLines 引用计数配对，避免重复隐藏） */
-let splitLinesHidden = false;
+/** 分离动画期间是否已进入降级（与 ctx.beginDegrade 引用计数配对，避免重复进入） */
+let splitDegradeActive = false;
 
-/** hideSplitLines - 分离动画期间临时隐藏线条（削减 draw call，只隐藏一次） */
-const hideSplitLines = (ctx: ToolContext) => {
-	if (splitLinesHidden) return;
-	splitLinesHidden = true;
-	ctx.hideLines();
+/**
+ * startSplitDegrade - 分离动画期间进入性能降级（隐藏线条 + 冻结阴影）
+ *
+ * @description 与交互降级共用同一套引用计数实现（仅重模型生效）；冻结阴影是因为
+ * 分离过程中部件持续位移，阴影贴图每帧重绘开销大，动画结束（endSplitDegrade）后补渲染一次即可。
+ */
+const startSplitDegrade = (ctx: ToolContext) => {
+	if (splitDegradeActive) return;
+	splitDegradeActive = true;
+	ctx.beginDegrade(true);
 };
 
-/** showSplitLines - 分离动画结束/中断后恢复线条可见性 */
-const showSplitLines = (ctx: ToolContext) => {
-	if (!splitLinesHidden) return;
-	splitLinesHidden = false;
-	ctx.showLines();
+/** endSplitDegrade - 分离动画结束/中断后退出降级（恢复线条可见性并补渲染阴影） */
+const endSplitDegrade = (ctx: ToolContext) => {
+	if (!splitDegradeActive) return;
+	splitDegradeActive = false;
+	ctx.endDegrade(true);
 };
 
 /**
@@ -296,7 +301,7 @@ const ensureSplitSession = (ctx: ToolContext): boolean => {
 
 /** startSplitFrameTask - 启动(幂等)分离逐帧动画任务 */
 const startSplitFrameTask = (ctx: ToolContext) => {
-	hideSplitLines(ctx);
+	startSplitDegrade(ctx);
 	if (splitAnimating) return;
 	splitAnimating = true;
 	ctx.addFrameTask(SPLIT_FRAME_TASK_ID, ({ delta }) => stepModelSplit(ctx, delta));
@@ -311,7 +316,7 @@ const startSplitFrameTask = (ctx: ToolContext) => {
 const stepModelSplit = (ctx: ToolContext, delta: number) => {
 	if (!splitSession) {
 		splitAnimating = false;
-		showSplitLines(ctx);
+		endSplitDegrade(ctx);
 		ctx.removeFrameTask(SPLIT_FRAME_TASK_ID);
 		return;
 	}
@@ -322,7 +327,7 @@ const stepModelSplit = (ctx: ToolContext, delta: number) => {
 	applySolidOffset(splitCurrent);
 
 	// 运动结束（已到达目标）：恢复线条可见性
-	if (splitCurrent === splitTarget) showSplitLines(ctx);
+	if (splitCurrent === splitTarget) endSplitDegrade(ctx);
 
 	// 已完全还原：清理会话并注销逐帧任务
 	if (splitTarget === 0 && Math.abs(splitCurrent) < 1e-4) {
@@ -331,7 +336,7 @@ const stepModelSplit = (ctx: ToolContext, delta: number) => {
 		splitCurrent = 0;
 		splitTarget = 0;
 		splitAnimating = false;
-		showSplitLines(ctx);
+		endSplitDegrade(ctx);
 		ctx.removeFrameTask(SPLIT_FRAME_TASK_ID);
 	}
 };

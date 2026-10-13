@@ -178,7 +178,7 @@ export function useThreeScene() {
 		if (!isMoveMode.value || e.button !== 0) return;
 		isDragging = true;
 		previousMousePosition = { x: e.clientX, y: e.clientY };
-		beginInteraction(false);
+		beginDegrade(false); // 平移：模型在动、阴影需逐帧跟随，故不冻结阴影
 	};
 
 	/**
@@ -217,11 +217,12 @@ export function useThreeScene() {
 	/**
 	 * onMouseUp - 鼠标释放事件处理
 	 *
-	 * @description 重置拖拽状态
+	 * @description 重置拖拽状态并退出平移降级
 	 */
 	const onMouseUp = () => {
+		if (!isDragging) return;
 		isDragging = false;
-		scheduleEndInteraction();
+		endDegrade(false);
 	};
 
 	/**
@@ -372,76 +373,99 @@ export function useThreeScene() {
 		}
 	};
 
-	// ---- 交互时降级（性能）----
-	// 大模型（如主轴-1 有 6868 条 LineSegments）逐条绘制会造成 draw call 爆炸，
-	// 拖拽/缩放期间明显卡顿。线条显示与阴影贴图重绘都与相机姿态无关，
-	// 因此交互期间临时隐藏线条并冻结阴影贴图更新，松手后原样恢复，
-	// 交互结束后补渲染一次阴影，保证静止画面与交互前一致。
-	let degradeActive = false;
-	let degradeFreezeShadow = false;
-	let degradeShadowAutoUpdate = true;
-	let degradeRestoreTimer = 0;
+	// ---- 交互/动画期间性能降级（隐藏线条 + 冻结阴影）----
+	// 重模型（如 6868 条 LineSegments）逐条绘制会造成 draw call 爆炸，拖拽/缩放期间明显卡顿。
+	// 线条显示与阴影贴图重绘都与「最终静止画面」无关：降级期间临时隐藏线条、冻结阴影贴图自动更新，
+	// 结束后补渲染一次阴影，保证静止画面正确。
+	// 交互（旋转/缩放）与模型分离（爆炸）共用同一套引用计数，可叠加、互不干扰。
+	// 仅对「重模型」生效：小模型逐帧成本低，降级带来的线条闪现反而更明显，故直接跳过。
+	// 线条/网格对象总数阈值：实测重模型（主轴-1≈8483、机械式驻车制动卡钳-1≈8610）远超此值，
+	// 其余模型均 < 800，取 2000 可稳定区分且不误伤小模型
+	const DEGRADE_OBJECT_THRESHOLD = 2000;
+	const DEGRADE_RESTORE_DELAY = 180; // 交互降级结束的防抖时长（毫秒），合并滚轮 start/end 抖动
+	let heavyModel = false; // 当前模型是否重模型（加载后判定）
 
-	// 交互结束后延迟恢复：滚轮缩放时 TrackballControls 会在同一帧内连续派发
-	// start/end，若立即恢复则线条根本来不及隐藏，故延迟一小段时间再恢复，
-	// 连续的滚轮刻度期间保持降级状态。
-	const DEGRADE_RESTORE_DELAY = 180;
+	let degradeHolders = 0; // 降级持有者数量（引用计数）
+	let degradeFreezeHolders = 0; // 需要冻结阴影的持有者数量
+	let degradeShadowAutoUpdate = true; // 冻结前 shadowMap.autoUpdate 的原值
+	let degradeRestoreTimer = 0; // 交互降级结束的防抖定时器
 
 	/**
-	 * beginInteraction - 进入交互时降级
+	 * beginDegrade - 进入性能降级（引用计数）
 	 *
-	 * @description 隐藏线条以削减 draw call。仅当模型自身静止（相机旋转/缩放）时才冻结
-	 * 阴影贴图重绘——移动模式下模型正在位移，阴影需跟随，故不冻结。
+	 * @description 隐藏全部线条；freezeShadow 为 true 时同时冻结阴影贴图自动更新。
+	 * 交互（旋转/缩放）与模型分离（爆炸）共用本方法，通过引用计数叠加，
+	 * 任一方仍在使用时不会误恢复。仅重模型生效，小模型直接跳过。
 	 *
-	 * @param {boolean} freezeShadow - 是否冻结阴影贴图重绘
+	 * @param {boolean} freezeShadow - 是否冻结阴影贴图自动更新
 	 */
-	const beginInteraction = (freezeShadow: boolean) => {
+	const beginDegrade = (freezeShadow: boolean) => {
+		if (!heavyModel) return;
+		if (degradeHolders === 0) hideLines();
+		degradeHolders += 1;
+
+		if (freezeShadow) {
+			if (degradeFreezeHolders === 0) {
+				const shadowMap = renderer.value.shadowMap;
+				if (shadowMap) {
+					degradeShadowAutoUpdate = shadowMap.autoUpdate;
+					shadowMap.autoUpdate = false;
+				}
+			}
+			degradeFreezeHolders += 1;
+		}
+	};
+
+	/**
+	 * endDegrade - 退出性能降级（与 beginDegrade 配对）
+	 *
+	 * @description 引用计数归零时才真正恢复：还原线条可见性；若阴影曾被冻结，
+	 * 恢复 autoUpdate 并补渲染一次（needsUpdate），使静止画面与交互前一致。
+	 *
+	 * @param {boolean} freezeShadow - 与进入时传参保持一致
+	 */
+	const endDegrade = (freezeShadow: boolean) => {
+		if (degradeHolders === 0) return;
+		degradeHolders -= 1;
+
+		if (freezeShadow && degradeFreezeHolders > 0) {
+			degradeFreezeHolders -= 1;
+			if (degradeFreezeHolders === 0) {
+				const shadowMap = renderer.value.shadowMap;
+				if (shadowMap) {
+					shadowMap.autoUpdate = degradeShadowAutoUpdate;
+					shadowMap.needsUpdate = true;
+				}
+			}
+		}
+
+		if (degradeHolders === 0) showLines();
+	};
+
+	// 交互（旋转/缩放）降级状态：控制器 start/end 可能连续触发，故独立去重
+	let interactionDegradeActive = false;
+
+	/** 控制器交互开始（旋转/缩放）：进入降级并冻结阴影（模型静止，冻结安全） */
+	const onControlsStart = () => {
 		if (degradeRestoreTimer) {
 			clearTimeout(degradeRestoreTimer);
 			degradeRestoreTimer = 0;
 		}
-		if (degradeActive) return;
-		degradeActive = true;
-		degradeFreezeShadow = freezeShadow;
-		hideLines();
-
-		const shadowMap = renderer.value.shadowMap;
-		if (freezeShadow && shadowMap) {
-			degradeShadowAutoUpdate = shadowMap.autoUpdate;
-			shadowMap.autoUpdate = false;
-		}
+		if (interactionDegradeActive) return;
+		interactionDegradeActive = true;
+		beginDegrade(true);
 	};
 
-	/** endInteraction - 结束交互：恢复线条可见性，必要时补渲染一次阴影 */
-	const endInteraction = () => {
-		if (degradeRestoreTimer) {
-			clearTimeout(degradeRestoreTimer);
-			degradeRestoreTimer = 0;
-		}
-		if (!degradeActive) return;
-		degradeActive = false;
-		showLines();
-
-		const shadowMap = renderer.value.shadowMap;
-		if (degradeFreezeShadow && shadowMap) {
-			shadowMap.autoUpdate = degradeShadowAutoUpdate;
-			shadowMap.needsUpdate = true;
-		}
-		degradeFreezeShadow = false;
-	};
-
-	/** scheduleEndInteraction - 延迟结束交互，合并滚轮缩放的同帧 start/end 抖动 */
-	const scheduleEndInteraction = () => {
+	/** 控制器交互结束：防抖后退出降级，合并滚轮缩放的同帧 start/end 抖动 */
+	const onControlsEnd = () => {
 		if (degradeRestoreTimer) clearTimeout(degradeRestoreTimer);
 		degradeRestoreTimer = window.setTimeout(() => {
 			degradeRestoreTimer = 0;
-			endInteraction();
+			if (!interactionDegradeActive) return;
+			interactionDegradeActive = false;
+			endDegrade(true);
 		}, DEGRADE_RESTORE_DELAY);
 	};
-
-	// 控制器交互（相机旋转/缩放）期间冻结阴影；移动模式（模型位移）不冻结
-	const onControlsStart = () => beginInteraction(true);
-	const onControlsEnd = () => scheduleEndInteraction();
 
 	/**
 	 * init - 初始化 3D 场景
@@ -480,6 +504,8 @@ export function useThreeScene() {
 			axes.value = result.axes;
 			meshes.value = result.meshes;
 			lines.value = result.lines;
+			// 判定是否为「重模型」：线条/网格对象总数超过阈值才启用交互/爆炸降级
+			heavyModel = result.lines.length + result.meshes.length >= DEGRADE_OBJECT_THRESHOLD;
 			box.value = result.box;
 			sceneUserData.value = result.sceneUserData;
 			scene.value.add(modelGroup.value);
@@ -493,7 +519,7 @@ export function useThreeScene() {
 				lightingResult?.update(lightOrigin);
 			});
 			controls.value = createControls(camera.value, renderer.value.domElement, result.modelSize);
-			// 交互（旋转/缩放）期间降级：隐藏线条 + 冻结阴影贴图重绘，松手恢复
+			// 交互（旋转/缩放）期间降级（仅重模型）：隐藏线条 + 冻结阴影贴图重绘，松手恢复
 			controls.value.addEventListener('start', onControlsStart);
 			controls.value.addEventListener('end', onControlsEnd);
 
@@ -622,5 +648,7 @@ export function useThreeScene() {
 		removeFrameTask,
 		hideLines,
 		showLines,
+		beginDegrade,
+		endDegrade,
 	};
 }
