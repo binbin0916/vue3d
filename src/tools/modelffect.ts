@@ -1,7 +1,14 @@
 import type { ToolContext, ToolHandler, ToolDefinition } from './types';
 import { defineTool } from './registry';
-import { Material } from 'three';
+import type { Material, MeshLambertMaterial, MeshStandardMaterial } from 'three';
 import { showGroundShadow, restoreGroundShadow } from '@/tools/shadow';
+
+/**
+ * ModelMaterial - 模型材质类型
+ *
+ * @description 桌面端使用 MeshStandardMaterial、移动端使用 MeshLambertMaterial，二者均支持 wireframe
+ */
+type ModelMaterial = MeshLambertMaterial | MeshStandardMaterial;
 
 export const setTransparent: ToolHandler = (ctx: ToolContext) => {
 	ctx.meshes.forEach((mesh) => {
@@ -33,19 +40,15 @@ export const revertOutline: ToolHandler = (ctx: ToolContext) => {
 
 export const setWireframe: ToolHandler = (ctx: ToolContext) => {
 	ctx.meshes.forEach((mesh) => {
-		(mesh.material as Material).transparent = true;
-		(mesh.material as Material).opacity = 0;
-	});
-	ctx.lines.forEach((line) => {
-		(line.material as Material).transparent = true;
-		(line.material as Material).opacity = 1;
+		(mesh.material as ModelMaterial).transparent = true;
+		(mesh.material as ModelMaterial).opacity = 0;
 	});
 };
 
 export const revertWireframe: ToolHandler = (ctx: ToolContext) => {
 	ctx.meshes.forEach((mesh) => {
-		(mesh.material as Material).transparent = true;
-		(mesh.material as Material).opacity = 1;
+		(mesh.material as ModelMaterial).transparent = true;
+		(mesh.material as ModelMaterial).opacity = 1;
 	});
 };
 
