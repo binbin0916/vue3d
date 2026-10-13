@@ -66,7 +66,7 @@ export const viewRotate: ToolHandler = (ctx) => setViewAngle(ctx, 'rotate');
 export const resetViewRotate: ToolHandler = (ctx) => setViewAngle(ctx, 'rotate:reset');
 
 export const tools: ToolDefinition[] = [
-	defineTool({ id: 'return-origin', menu: { icon: 'icon-home', label: '返回原点' }, activate: viewOrigin }),
+	defineTool({ id: 'return-origin', menu: { icon: 'icon-home', label: '回到原点' }, activate: viewOrigin }),
 	defineTool({ id: 'view-front', menu: { icon: 'icon-frontView', label: '正视图', group: 'view' }, activate: viewFront }),
 	defineTool({ id: 'view-back', menu: { icon: 'icon-backView', label: '后视图', group: 'view' }, activate: viewBack }),
 	defineTool({ id: 'view-left', menu: { icon: 'icon-leftView', label: '左视图', group: 'view' }, activate: viewLeft }),
