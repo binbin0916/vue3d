@@ -1,6 +1,7 @@
 import { ref, shallowRef } from 'vue';
 import * as THREE from 'three';
-import type { TrackballControls } from 'three/addons/controls/TrackballControls.js';
+// import type { TrackballControls } from 'three/addons/controls/TrackballControls.js';
+import type { ModelControls } from '@/utils/ModelControls';
 import type { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import { createRenderer, createScene, createCamera, addLights, loadModel, createControls, createCSS2DRenderer } from '@/three';
 import type { LoadProgress } from '@/three';
@@ -39,7 +40,8 @@ export function useThreeScene() {
 	const scene = shallowRef<THREE.Scene>({} as THREE.Scene);
 	const camera = shallowRef<THREE.PerspectiveCamera>({} as THREE.PerspectiveCamera);
 	const modelGroup = shallowRef<THREE.Object3D>({} as THREE.Object3D);
-	const controls = shallowRef<TrackballControls>({} as TrackballControls);
+	// const controls = shallowRef<TrackballControls>({} as TrackballControls);
+	const controls = shallowRef<ModelControls>({} as ModelControls);
 	const axes = shallowRef<THREE.AxesHelper>({} as THREE.AxesHelper);
 	const meshes = ref<THREE.Mesh[]>([]);
 	const lines = ref<THREE.LineSegments[]>([]);
@@ -59,6 +61,10 @@ export function useThreeScene() {
 	let previousMousePosition = { x: 0, y: 0 };
 	let containerElement: HTMLElement | null = null;
 	let rafId = 0;
+
+	// 复用的临时对象：自动旋转轴 / ViewCube 面点击的插值姿态（避免每帧分配）
+	const spinAxis = new THREE.Vector3(0, 0, 1);
+	const faceQuat = new THREE.Quaternion();
 
 	const frameTasks = new Map<string, FrameTask>();
 
@@ -105,7 +111,7 @@ export function useThreeScene() {
 
 	// 旋转四元数
 	const cameraWorldQuat = new THREE.Quaternion();
-	const modelWorldQuat = new THREE.Quaternion();
+	// const modelWorldQuat = new THREE.Quaternion();
 
 	const timer = new THREE.Timer();
 	/**
@@ -125,12 +131,15 @@ export function useThreeScene() {
 
 		if (cubeResult) {
 			camera.value.getWorldQuaternion(cameraWorldQuat);
-			modelGroup.value.getWorldQuaternion(modelWorldQuat);
-			cubeResult.cubeGroup.quaternion.copy(cameraWorldQuat).invert().multiply(modelWorldQuat);
+			// modelGroup.value.getWorldQuaternion(modelWorldQuat);
+			// cubeResult.cubeGroup.quaternion.copy(cameraWorldQuat).invert().multiply(modelWorldQuat);
+
+			cubeResult.cubeGroup.rotation.copy(modelGroup.value.rotation);
 		}
 
 		if (autoRotate.value) {
-			modelGroup.value.rotateZ((Math.PI / 2) * delta);
+			// 走控制器入口，姿态变更集中由 ModelControls 管理（不再直接改 modelGroup）
+			controls.value.rotateLocal(spinAxis, (Math.PI / 2) * delta);
 		}
 
 		// 执行从其他文件动态注册的逐帧逻辑
@@ -320,7 +329,9 @@ export function useThreeScene() {
 			const t = Math.min(elapsed / duration, 1);
 			const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
-			modelGroup.value.quaternion.slerpQuaternions(startQuat, targetModelLocalQuat, ease);
+			// 走控制器入口，姿态变更集中由 ModelControls 管理（不再直接改 modelGroup.quaternion）
+			faceQuat.slerpQuaternions(startQuat, targetModelLocalQuat, ease);
+			controls.value.setOrientation(faceQuat);
 
 			if (t < 1) {
 				animationRafId = requestAnimationFrame(animateRotation);
@@ -518,7 +529,12 @@ export function useThreeScene() {
 				modelGroup.value.getWorldPosition(lightOrigin);
 				lightingResult?.update(lightOrigin);
 			});
-			controls.value = createControls(camera.value, renderer.value.domElement, result.modelSize);
+			// 原有控制器（TrackballControls：相机环绕、禁用平移）——改用 ModelControls（操作模型），保留以备回退
+			// controls.value = createControls(camera.value, renderer.value.domElement, result.modelSize);
+			// ModelControls：以模型 modelGroup 为操作对象（绕中心旋转 / 缩放），相机保持不动
+			controls.value = createControls(modelGroup.value, camera.value, renderer.value.domElement, result.modelSize);
+			// 记录初始位姿，供退出移动模式时 reset() 还原模型位置与朝向
+			controls.value.saveState();
 			// 交互（旋转/缩放）期间降级（仅重模型）：隐藏线条 + 冻结阴影贴图重绘，松手恢复
 			controls.value.addEventListener('start', onControlsStart);
 			controls.value.addEventListener('end', onControlsEnd);
@@ -554,8 +570,11 @@ export function useThreeScene() {
 		window.removeEventListener('mouseup', onMouseUp);
 		controls.value.removeEventListener('start', onControlsStart);
 		controls.value.removeEventListener('end', onControlsEnd);
+		// 释放控制器自身绑定的 DOM 监听（ModelControls 在 connect() 中绑定了 pointer/wheel/contextmenu）
+		if (typeof controls.value.dispose === 'function') controls.value.dispose();
 		if (degradeRestoreTimer) clearTimeout(degradeRestoreTimer);
 		renderer.value.dispose();
+		
 		cubeResult?.dispose();
 		lightingResult?.dispose();
 		lightingResult = null;

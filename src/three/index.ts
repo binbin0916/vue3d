@@ -4,5 +4,6 @@ export { createCamera } from './camera';
 export { addLights } from './light';
 export { loadModel } from './model';
 export type { LoadProgress } from './model';
-export { createControls } from './controls';
+// export { createControls } from './controls'; // 原 TrackballControls 控制器（相机环绕），改用 ModelControls
+export { createControls } from './modelControls';
 export { createCSS2DRenderer } from './css2DRenderer';

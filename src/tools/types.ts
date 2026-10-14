@@ -1,6 +1,7 @@
 import type { GLBSceneUserData } from '@/types/userdata-types';
 import type * as THREE from 'three';
-import type { TrackballControls } from 'three/addons/controls/TrackballControls.js';
+// import type { TrackballControls } from 'three/addons/controls/TrackballControls.js';
+import type { ModelControls } from '@/utils/ModelControls';
 
 /**
  * ToolContext - 工具执行上下文
@@ -17,8 +18,8 @@ export interface ToolContext {
 	camera: THREE.PerspectiveCamera;
 	/** 模型根组（已旋转 45°） */
 	modelGroup: THREE.Object3D;
-	/** 轨道控制器 */
-	controls: TrackballControls;
+	/** 轨道控制器（ModelControls：以模型为操作对象，绕过中心旋转/缩放） */
+	controls: ModelControls;
 	/** 模型包围盒最大边长 */
 	modelSize: number;
 	/** 归一化缩放系数：真实尺寸 = 显示尺寸 / scaleFactor（模型被归一化缩放后的换算依据） */
