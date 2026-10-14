@@ -128,10 +128,6 @@ export function loadModel(url: string, onProgress?: (_progress: LoadProgress) =>
 				scene.scale.set(1, 1, 1);
 
 				const box = new THREE.Box3().setFromObject(scene);
-				const center = new THREE.Vector3();
-				box.getCenter(center);
-				scene.position.sub(center);
-				scene.name = 'modelGroup';
 
 				const size = new THREE.Vector3();
 				box.getSize(size);
@@ -140,7 +136,16 @@ export function loadModel(url: string, onProgress?: (_progress: LoadProgress) =>
 				// 归一化缩放：包围盒最大边缩放到 TARGET_SIZE（以 IPTH8-20.glb 原始尺寸为基准），
 				// 使不同尺寸的模型在场景中显示大小一致
 				const scaleFactor = rawModelSize > 0 ? TARGET_SIZE / rawModelSize : 1;
+
+				// 居中：位移必须在「缩放后」的空间中计算（= -中心 × scaleFactor）。
+				// 若先按未缩放的中心位移、之后才缩放，模型中心会残留 center*(scaleFactor-1) 的偏移，
+				// 导致旋转/缩放不绕模型中心进行（先扣除 scene 自身位移，得到相对原点的几何中心）
+				const center = new THREE.Vector3();
+				box.getCenter(center).sub(scene.position);
+
 				scene.scale.setScalar(scaleFactor);
+				scene.position.copy(center).multiplyScalar(-scaleFactor);
+				scene.name = 'modelGroup';
 
 				// 缩放后重算包围盒与尺寸，保证 modelSize/box 与场景中的实际显示一致，
 				// 进而使灯光、相机、控制器对所有模型采用同一尺寸基准
