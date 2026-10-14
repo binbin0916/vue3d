@@ -201,7 +201,14 @@ export const useViewCube = (container: HTMLElement, onFaceClick?: (_meshName: st
 		dispose: () => {
 			cubeRenderer.domElement.removeEventListener('pointermove', handleMouseMove, false);
 			cubeRenderer.domElement.removeEventListener('click', handleClick, false);
+			// TrackballControls 在构造时绑定了 DOM 事件，需一并释放
+			cubeControls.dispose();
+			// dispose() 只释放 GPU 资源、不归还 WebGL context；必须显式 forceContextLoss，
+			// 否则重复初始化（HMR / 重新挂载）时 context 会累积到浏览器上限并触发
+			//「Too many active WebGL contexts. Oldest context will be lost.」
+			cubeRenderer.forceContextLoss();
 			cubeRenderer.dispose();
+			cubeRenderer.domElement.remove();
 			cubeContainer.remove();
 		},
 	};
