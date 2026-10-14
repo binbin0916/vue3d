@@ -9,6 +9,7 @@ import type { MenuNode } from './registry';
 export const toolbarMenu: MenuNode[] = [
 	'return-origin',
 	'rotate',
+	'move-model',
 	{
 		id: 'measure',
 		icon: 'icon-measure',
@@ -75,6 +76,7 @@ export const toolbarMenu: MenuNode[] = [
 		label: '剖切',
 		children: ['section-plane', 'section-sphere'],
 	},
+	'boundbox',
 	// 包围盒
 	// 拖动
 	// 局部放大

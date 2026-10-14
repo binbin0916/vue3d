@@ -1,6 +1,8 @@
 // import * as THREE from 'three';
 import type { ToolContext, ToolHandler, ToolDefinition } from './types';
 import { defineTool } from './registry';
+import { tweenVector3 } from '@/utils/common';
+import { Vector3 } from 'three';
 // import { FACES, getFaceConfigs } from '@/utils/cube';
 
 /**
@@ -58,7 +60,10 @@ export const viewTop: ToolHandler = (ctx) => setViewAngle(ctx, 'Square_Face_14')
 /** 仰视图 */
 export const viewBottom: ToolHandler = (ctx) => setViewAngle(ctx, 'Square_Face_13');
 /** 返回原点 */
-export const viewOrigin: ToolHandler = (ctx) => setViewAngle(ctx, 'Triangle_Face_1');
+export const viewOrigin: ToolHandler = (ctx) => {
+	setViewAngle(ctx, 'Triangle_Face_1');
+	tweenVector3(ctx.modelGroup.position, ctx.modelGroup.position, new Vector3(0, 0, 0));
+};
 
 /** 旋转 */
 export const viewRotate: ToolHandler = (ctx) => setViewAngle(ctx, 'rotate');

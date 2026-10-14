@@ -1,17 +1,21 @@
-import type { ToolContext, ToolHandler, CustomAction } from './types';
-import { defineAction } from './registry';
+import type { ToolContext, ToolHandler, ToolDefinition } from './types';
+import { defineTool } from './registry';
 
-/**
- * setMoveSpeed - 设置移动速度
- *
- * @description 设置鼠标拖拽平移模型时的速度倍率
- *
- * @param {ToolContext} ctx - 工具执行上下文
- * @param {number} [payload=1] - 速度倍率（建议范围 0.1-10）
- */
-export const setMoveSpeed: ToolHandler = (ctx: ToolContext, payload?: number) => {
-	ctx.setMoveSpeed(payload ?? 1);
+export const moveModel: ToolHandler = (ctx: ToolContext) => {
+	ctx.controls.setMode('pan');
+	void ctx;
 };
 
-/** 非菜单的自定义动作（由业务代码直接调用） */
-export const actions: CustomAction[] = [defineAction({ id: 'move:setSpeed', handler: setMoveSpeed })];
+export const revertMoveModel: ToolHandler = (ctx: ToolContext) => {
+	ctx.controls.setMode('rotate');
+	void ctx;
+};
+
+export const tools: ToolDefinition[] = [
+	defineTool({
+		id: 'move-model',
+		menu: { icon: 'icon-move', label: '移动', activatable: true },
+		activate: moveModel,
+		deactivate: revertMoveModel,
+	}),
+];
