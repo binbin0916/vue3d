@@ -91,6 +91,41 @@ export function useThreeScene() {
 	// ---- 环境光照资源（场景销毁时释放，避免 GPU 资源泄漏） ----
 	let lightingResult: ReturnType<typeof addLights> | null = null;
 
+	// ---- 初始化令牌 / 卸载标记 ----
+	// init 是异步的（需 await 模型加载）。若期间发生 HMR 重挂载或组件卸载，
+	// 过期的 init 必须提前退出，否则会在已脱离文档的容器上继续创建控制器与 ViewCube 渲染器，
+	// 每次泄漏一个 WebGL context（浏览器上限约 16 个，超出会丢弃最旧的并告警）。
+	let initId = 0;
+	let disposed = false;
+
+	/**
+	 * releaseRenderer - 真正回收 WebGL 渲染器占用的 context
+	 *
+	 * @description renderer.dispose() 只释放 GPU 资源，既不归还 WebGL context、也不移除 canvas，
+	 * 重复初始化时 context 会持续累积直到触发「Too many active WebGL contexts」。
+	 * 故必须显式 forceContextLoss() 并移除 canvas。
+	 *
+	 * @param {THREE.WebGLRenderer} [target] - 待回收的渲染器（可为未初始化的空对象）
+	 */
+	const releaseRenderer = (target?: THREE.WebGLRenderer | null) => {
+		if (!target || typeof target.dispose !== 'function') return;
+		target.forceContextLoss();
+		target.dispose();
+		target.domElement?.remove();
+	};
+
+	/**
+	 * releaseCss2dRenderer - 移除 CSS2D 渲染器的 DOM 层
+	 *
+	 * @description CSS2D 渲染器无 WebGL context，但会把 domElement 持续追加到容器造成 DOM 累积
+	 *
+	 * @param {CSS2DRenderer} [target] - 待移除的 CSS2D 渲染器
+	 */
+	const releaseCss2dRenderer = (target?: CSS2DRenderer | null) => {
+		if (!target || typeof target.domElement?.remove !== 'function') return;
+		target.domElement.remove();
+	};
+
 	/**
 	 * render - 执行单帧渲染
 	 *
@@ -495,12 +530,16 @@ export function useThreeScene() {
 		const path = `${MODEL_PATH}${code}.glb`;
 		const MIN_DISPLAY_TIME = 1000; // 最小loading时长
 
+		const token = ++initId; // 本轮初始化的令牌
+		disposed = false;
 		containerElement = container;
 		loading.value = true;
 
 		try {
-			renderer.value = createRenderer(container);
-			css2dRenderer.value = createCSS2DRenderer(container);
+			const localRenderer = createRenderer(container);
+			const localCss2dRenderer = createCSS2DRenderer(container);
+			renderer.value = localRenderer;
+			css2dRenderer.value = localCss2dRenderer;
 			scene.value = createScene();
 
 			const startTime = performance.now();
@@ -508,6 +547,14 @@ export function useThreeScene() {
 			const result = await loadModel(path, (p) => {
 				loadProgress.value = p;
 			});
+
+			// 过期初始化（HMR 重挂载 / 组件已卸载）：回收本轮渲染器后退出。
+			// 若继续执行，会在已脱离文档的容器上创建控制器与 ViewCube 渲染器，每轮泄漏一个 WebGL context。
+			if (token !== initId || disposed) {
+				releaseRenderer(localRenderer);
+				releaseCss2dRenderer(localCss2dRenderer);
+				return;
+			}
 
 			modelGroup.value = result.group;
 			modelSize.value = result.modelSize;
@@ -551,33 +598,55 @@ export function useThreeScene() {
 		} catch (err) {
 			console.error('useThreeScene init failed:', err);
 		} finally {
-			loading.value = false;
+			// 过期初始化（已被新一轮 init 取代，或组件已卸载）不得关闭新一轮的 loading：
+			// 卸载场景下 dispose() 已负责收尾，被取代时 loading 应保持新一轮的状态
+			if (token === initId && !disposed) loading.value = false;
 		}
 	};
 
 	/**
 	 * dispose - 销毁 3D 场景
 	 *
-	 * @description 移除窗口 resize 监听、鼠标事件监听，释放渲染器资源。
-	 * 应在组件 onUnmounted 时调用以防止内存泄漏
+	 * @description 置位卸载标记并递增初始化令牌（让仍在 await 中的 init 判定过期并自行回收），
+	 * 移除窗口/鼠标事件监听，释放控制器与渲染器资源（含 WebGL context）。
+	 * 应在组件 onUnmounted 时调用以防止内存泄漏。
 	 */
 	const dispose = () => {
+		// 递增令牌 + 置位标记：仍在等模型加载的 init 会在 await 之后据此退出
+		disposed = true;
+		initId += 1;
+
 		cancelAnimationFrame(rafId);
+		rafId = 0;
 		frameTasks.clear();
 		window.removeEventListener('resize', onResize);
 		containerElement?.removeEventListener('mousedown', onMouseDown);
 		window.removeEventListener('mousemove', onMouseMove);
 		window.removeEventListener('mouseup', onMouseUp);
-		controls.value.removeEventListener('start', onControlsStart);
-		controls.value.removeEventListener('end', onControlsEnd);
+		if (degradeRestoreTimer) {
+			clearTimeout(degradeRestoreTimer);
+			degradeRestoreTimer = 0;
+		}
+
+		// 控制器：init 未完成即卸载时 controls 仍是未初始化的空对象，
+		// 必须逐步守卫，否则一次 TypeError 会中断后续全部清理（渲染器/ViewCube 全部泄漏）
+		const control = controls.value as Partial<ModelControls> | undefined;
+		if (control && typeof control.removeEventListener === 'function') {
+			control.removeEventListener('start', onControlsStart);
+			control.removeEventListener('end', onControlsEnd);
+		}
 		// 释放控制器自身绑定的 DOM 监听（ModelControls 在 connect() 中绑定了 pointer/wheel/contextmenu）
-		if (typeof controls.value.dispose === 'function') controls.value.dispose();
-		if (degradeRestoreTimer) clearTimeout(degradeRestoreTimer);
-		renderer.value.dispose();
-		
+		if (control && typeof control.dispose === 'function') control.dispose();
+
+		// WebGL 资源：renderer.dispose() 不会归还 context，须 forceContextLoss + 移除 canvas
+		releaseRenderer(renderer.value);
+		releaseCss2dRenderer(css2dRenderer.value);
+
 		cubeResult?.dispose();
+		cubeResult = null;
 		lightingResult?.dispose();
 		lightingResult = null;
+		loading.value = false;
 	};
 
 	/**
